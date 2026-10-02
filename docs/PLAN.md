@@ -24,11 +24,20 @@ All content is data-driven — prices, products, add-ons and coach bios live in 
 
 ---
 
-## 2. Design direction (draft — confirm with brand assets)
+## 2. Design direction
 
-- **Mood:** premium, dark, athletic, calm. "High-end supplement brand", not "loud gym flyer".
-- **Colour:** near-black base (`#0B0B0C`), raised surfaces (`#151517`), off-white text, **one** accent used sparingly for CTAs/prices/badges (energy orange `#F97316` until the logo colours arrive). Optional light mode for the cafe menu.
-- **Type:** *Barlow Condensed* (uppercase display headings, prices) + *Inter* or *Barlow* (body). Large, confident numerals.
+Brand references live in `brand/reference/`:
+- `logo-white-on-black.jpg` — the Superfit star + lowercase "superfit" wordmark, white on black. Low-res: recreate it as a clean **SVG** (star mark + wordmark, white and black versions) and ask the owner for the original vector when possible.
+- `supercoach-team-poster.jpg` — the existing "SUPERCOACH TEAM — Train with us!" poster: black background, white heavy italic condensed headings, a red handwritten script accent, the four coaches in black Superfit kit. Hashtag `#IAMSUPERFIT`.
+- `font-avenir-next-heavy-condensed.png` — the owner's favourite typeface ("absolute GOAT of fonts").
+
+- **Mood:** premium, dark, athletic, confident. "High-end supplement brand", not "loud gym flyer". Black and white first; photography provides the colour.
+- **Colour:** true black base (`#000` / `#0A0A0A`), raised surfaces (`#141414`, `#1C1C1C`), white text, hairline borders `rgba(255,255,255,.08)`. **One accent: Superfit red** (from the poster script, approx `#E11D48` — tune against the poster) for CTAs, prices, badges, active states. Success green only for macro/progress UI. Optional light mode for the cafe menu.
+- **Type:**
+  - Display: **Avenir Next LT Pro Heavy Condensed** (+ Heavy Condensed Italic for hero lines, like the poster). It's an Adobe Fonts typeface — load it via the owner's **Adobe Fonts web kit** (`NEXT_PUBLIC_ADOBE_FONTS_KIT` env var / Typekit `<link>`). Until a kit ID exists, fall back to self-hosted **Barlow Condensed 800/900** (closest free match) through one `--font-display` variable, so switching is a one-line change.
+  - Body: **Avenir Next LT Pro** Regular/Demi from the same kit, fallback **Inter**.
+  - Uppercase italic for big statements ("TRAIN WITH US"), big tabular numerals for prices and macros.
+  - Optional red handwritten script accent (e.g. a signature-style font) used at most once per screen, echoing the poster.
 - **Layout:** 4px spacing grid, 16px mobile gutters, 20–24px card radius, generous whitespace, real photography doing the heavy lifting.
 - **Motion:** 200–300ms ease-out, spring for sheets/drag; respects `prefers-reduced-motion`.
 - **Rules (from UI UX Pro Max / taste):** SVG icons only (Lucide), 44px min touch targets, 4.5:1 contrast, visible focus, no layout shift, no generic AI gradients.
@@ -64,46 +73,65 @@ Mobile bottom tab bar (thumb zone), becomes a top nav on desktop:
 - **Product grid:** 2 columns on mobile, 3 on tablet, 4 on desktop. Card = square image, name, one-line description or ingredient pills, price ("from ฿149"), and a round **+** button for quick-add.
 - Empty categories (Performance today) render a tasteful "Coming soon" tile instead of disappearing.
 
-**Product sheet** (tap a card)
+**Product sheet** (tap a card) — must be the slickest part of the app
 - Bottom sheet (drag to dismiss) on mobile, centred modal on desktop.
-- Hero image, name, description, ingredient pills, macros (optional: kcal / protein).
-- **Option groups**, data-driven:
-  - *Single choice, required* — e.g. Size (Regular / Large +฿40), Hot/Iced, Single/Double.
-  - *Multi choice, optional, with max* — e.g. Add-ons: extra protein scoop, oat/almond milk, extra shot, peanut butter, sweetness level.
+- Hero image, name, description, **ingredient list**, and a **live macro panel**: kcal (big number) + protein / carbs / fat as a segmented bar and grams, plus sugar and fibre.
+- **Option groups**, data-driven, every option carries its own **price delta AND macro delta**:
+  - *Single choice, required* — Size (Regular / Large), Hot/Iced, Single/Double shot, Base (water / milk / oat / almond).
+  - *Multi choice, optional, with max* — Add-ons: whey scoop, plant protein, peanut butter, oats, creatine, collagen, banana, honey, extra shot.
+  - *Remove ingredients* — toggles that subtract an ingredient's macros (e.g. no banana, no honey).
+- Every tap animates the macro numbers and the price (count-up/down), so customers see "+24g protein · +฿40" instantly.
 - Quantity stepper + note field ("less ice").
-- Sticky footer button with **live total**: `Add to order · ฿189`.
-- Haptic-style micro-animation: item flies to cart badge.
+- Sticky footer button with **live total**: `Add to order · ฿189 · 412 kcal`.
+- Item flies to the cart badge on add.
 
 **Cart & checkout**
-- Cart drawer: line items with chosen options, edit (reopens sheet), qty, remove, subtotal.
-- Checkout: name, pickup time (ASAP / slot), dine-in table or takeaway, note.
-- Phase 1 ends at an order summary screen. Phase 2 connects real fulfilment (see open questions).
+- Cart drawer: line items with chosen options and **per-line macros**, edit (reopens sheet with selections), qty, remove.
+- **Order macro breakdown** at the top of the cart: total kcal, protein / carbs / fat ring or stacked bar, % split, so a member can see "this order = 62g protein".
+- Checkout: name, phone/member ID (optional), pickup time (ASAP / slot), dine-in table or takeaway, note, **payment method** (see 4.5).
+- Order confirmation screen with order number, status, macro summary.
 
-**Data model**
+**Data model** — macros are computed, never hand-typed per variant
 
 ```ts
+type Macros = { kcal: number; protein: number; carbs: number; fat: number; sugar?: number; fibre?: number };
+
+type Ingredient = { id: string; name: string; macros: Macros; allergens?: string[] };
+
+type Option = {
+  id: string; label: string;
+  priceDelta: number;          // THB
+  macroDelta?: Macros;         // added (or negative) macros
+  ingredientId?: string;       // or derive macros from an ingredient
+  multiplier?: number;         // e.g. Large = 1.4x base recipe
+  default?: boolean;
+};
+
 type OptionGroup = {
   id: string; title: string;
-  type: "single" | "multi";
+  type: "single" | "multi" | "remove";
   required?: boolean; max?: number;
-  options: { id: string; label: string; priceDelta: number; default?: boolean }[];
+  options: Option[];
 };
 
 type MenuItem = {
   id: string; slug: string; category: "smoothies" | "juices" | "coffee" | "performance";
-  name: string; description?: string; ingredients?: string[];
-  basePrice: number;           // "price" or "price_from"
-  priceIsFrom?: boolean;
-  image?: string; badges?: string[];
-  macros?: { kcal?: number; protein?: number };
+  name: string; description?: string;
+  recipe: { ingredientId: string; grams?: number }[];   // base macros come from the recipe
+  basePrice: number; priceIsFrom?: boolean;
+  image?: string; badges?: string[]; tags?: ("high-protein" | "low-cal" | "vegan" | "caffeine")[];
   optionGroups?: string[];     // ids of reusable OptionGroups
   available?: boolean;
 };
 
-type CartLine = { itemId: string; qty: number; selections: Record<string, string[]>; note?: string; unitPrice: number };
+type CartLine = {
+  id: string; itemId: string; qty: number;
+  selections: Record<string, string[]>; note?: string;
+  unitPrice: number; unitMacros: Macros;   // snapshot at add time
+};
 ```
 
-Option groups are defined once (e.g. `smoothie-size`, `protein-boost`, `milk`, `coffee-temp`) and attached to many items, so adding add-ons later is a one-line change.
+`lib/nutrition.ts` holds pure functions (`itemMacros(item, selections)`, `cartMacros(lines)`, `itemPrice(...)`) with unit tests. Option groups are defined once and attached to many items, so adding add-ons later is a one-line change. **Placeholder macros/recipes are fine for now — mark them `// TODO: confirm with cafe`.**
 
 ### 4.2 Coaches
 
@@ -143,6 +171,17 @@ Hero (video or photo, one strong line, two CTAs: *Order from Cafe* / *Join Super
 
 ---
 
+### 4.5 Payments (build the interface now, connect providers later)
+
+Payment methods to support: **Thai QR / PromptPay**, **Apple Pay** (and Google Pay / cards), and the in-store **Qashier** terminal (used heavily today), plus *Pay at counter*.
+
+- Build a provider-agnostic layer: `lib/payments/` with a `PaymentProvider` interface (`createPayment(order) → { status, qrPayload?, redirectUrl?, terminalRef? }`, `getStatus(id)`), and a **mock provider** that simulates success/failure so the full checkout UX works end to end now.
+- Checkout UI: payment method cards (PromptPay QR shows a QR screen with countdown + "waiting for payment" state; Apple Pay button shown only where supported; "Pay at counter / Qashier terminal" sends the order with `unpaid` status).
+- Candidates when connecting: **Opn Payments (Omise)** or **2C2P** cover PromptPay + Apple Pay + cards in Thailand; Qashier via its merchant/API integration if available, otherwise orders show on the counter and are charged on the terminal.
+- Orders and payment state go through a server action / API route so secrets never reach the browser.
+
+---
+
 ## 5. Project structure
 
 ```
@@ -163,7 +202,7 @@ content/
   pricing.json              # source data as supplied
   menu.ts  options.ts  coaches.ts  # typed content built on top of it
 lib/
-  cart-store.ts  pricing.ts (savings, per-session, THB format)  i18n/
+  cart-store.ts  pricing.ts (savings, per-session, THB format)  nutrition.ts  payments/  i18n/
 public/images/coaches/  public/images/menu/
 tests/e2e/                  # Playwright
 ```
@@ -174,19 +213,20 @@ tests/e2e/                  # Playwright
 
 | # | Session | Outcome |
 |---|---|---|
-| 1 | **Foundation + Cafe** | Next.js scaffold, tokens, fonts, app shell (header + bottom tabs), typed content layer, menu grid with chips/scroll-spy, product sheet with options, cart store + drawer |
+| 1 | **Foundation + Cafe** | Next.js scaffold, brand tokens, fonts, SVG logo, app shell (header + bottom tabs), typed content layer with ingredients + macros, menu grid with chips/scroll-spy, product sheet with options + live macros, cart with macro breakdown, checkout with mock payments |
 | 2 | **Coaches** | Rotator, shared-element transition, profile template, 4 coach entries (placeholder bios until supplied) |
 | 3 | **Train + Home** | Membership and PT pricing with computed savings, home page assembled |
 | 4 | **Polish & ship** | Motion pass, empty/loading states, a11y + Lighthouse, Playwright flows at 4 breakpoints, Vercel deploy |
-| 5 | **Real ordering** | Payment / order routing per decision below, Thai translation |
+| 5 | **Real ordering** | Connect PromptPay / Apple Pay / Qashier, order notifications to staff, Thai translation |
 
 ---
 
 ## 7. Open questions
 
-1. **Coach photo(s)** — the group photo didn't come through; individual portraits are ideal (vertical, high-res).
-2. **Logo + brand colours** — or approve the dark + orange direction above.
-3. **Where do cafe orders go?** e.g. LINE message to staff, kitchen tablet screen, PromptPay QR payment, or Grab/Lineman links.
-4. **Add-ons & sizes** — list with prices (protein scoop, milk alternatives, sizes for smoothies/juices).
-5. **Language** — English only at launch, or English + Thai.
-6. **Domain / hosting** — OK with Vercel?
+1. **Individual coach portraits** — coming later. Until then use `brand/reference/supercoach-team-poster.jpg` (crop per coach) or tasteful placeholders. Coach order left → right in the poster is assumed to be Bella, Nicha, Aun, Poom — **confirm with the owner**.
+2. **Logo vector** (SVG/AI) — recreate from the JPG for now.
+3. **Adobe Fonts kit ID** for Avenir Next LT Pro — fallback font until provided.
+4. **Real recipes, macros, add-ons and prices** for the cafe — placeholders until supplied.
+5. **Payment provider accounts** (Opn/Omise or 2C2P, Qashier details) — mock until then.
+6. **Language** — English at launch, Thai-ready.
+7. **Domain / hosting** — Vercel assumed.

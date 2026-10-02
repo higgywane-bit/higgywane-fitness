@@ -31,3 +31,25 @@ export function getPTPackage(id: string): PTPackage | undefined {
 export function lowestPerSession(): number {
   return Math.min(...ptPackages().map((p) => p.perSession));
 }
+
+export type Membership = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  badge?: string;
+  saving?: number;
+};
+
+type RawMembership = { name: string; description?: string; price: number; badge?: string; saving?: number };
+
+export function memberships(products: RawMembership[] = pricing.sections.memberships.products): Membership[] {
+  return products.map((p, i) => ({
+    id: `member-${i}`,
+    name: p.name,
+    description: p.description || "",
+    price: p.price,
+    badge: p.badge,
+    saving: p.saving,
+  }));
+}

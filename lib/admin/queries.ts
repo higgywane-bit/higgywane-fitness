@@ -29,9 +29,18 @@ export type MemberListRow = {
   ptLeft: number | null;
   lastVisit: string | null;
   codes: string[];
+  tags: string[];
+  marketingOptIn: boolean;
+  /** can train but hasn't been in for a while (see AT_RISK_DAYS) */
+  atRisk: boolean;
 };
 
-function toRow(m: typeof t.members.$inferSelect, s: MemberStanding, lastVisit: Date | undefined, codes: string[]): MemberListRow {
+/** Active members who haven't visited in this many days are flagged "at risk". */
+export const AT_RISK_DAYS = 14;
+
+function toRow(m: typeof t.members.$inferSelect, s: MemberStanding, lastVisit: Date | undefined, codes: string[], now: Date): MemberListRow {
+  const quietSince = lastVisit ?? m.createdAt;
+  const atRisk = (s.status === "active" || s.status === "expiring") && now.getTime() - quietSince.getTime() > AT_RISK_DAYS * 86_400_000;
   return {
     id: m.id,
     memberNo: m.memberNo,
@@ -54,6 +63,9 @@ function toRow(m: typeof t.members.$inferSelect, s: MemberStanding, lastVisit: D
     ptLeft: s.pt?.sessionsLeft ?? null,
     lastVisit: lastVisit?.toISOString() ?? null,
     codes,
+    tags: m.tags ?? [],
+    marketingOptIn: m.marketingOptIn,
+    atRisk,
   };
 }
 
@@ -76,7 +88,7 @@ export async function listMembers(now = new Date()): Promise<MemberListRow[]> {
   const last = new Map(visits.map((v) => [v.memberId, v.last]));
   const codes = new Map<string, string[]>();
   for (const c of creds) codes.set(c.memberId, [...(codes.get(c.memberId) ?? []), c.code]);
-  return rows.map((m) => toRow(m, memberStanding(byMember.get(m.id) ?? [], today), last.get(m.id), codes.get(m.id) ?? []));
+  return rows.map((m) => toRow(m, memberStanding(byMember.get(m.id) ?? [], today), last.get(m.id), codes.get(m.id) ?? [], now));
 }
 
 export async function getMemberDetail(id: string, now = new Date()) {

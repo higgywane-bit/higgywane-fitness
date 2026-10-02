@@ -3,7 +3,9 @@ import { planEndDate } from "@/lib/membership/access";
 import { generateAccessCode, generatePassToken } from "@/lib/membership/codes";
 import { addDays, localDate } from "@/lib/membership/dates";
 import type { DB } from "./client";
+import { eq } from "drizzle-orm";
 import { activity, checkIns, credentials, members, memberships, sales } from "./schema";
+import { seedExtra } from "./seed-extra";
 
 /*
  * Demo data for local development: believable members in every state (active,
@@ -180,4 +182,11 @@ export async function seedDemo(db: DB, now = new Date()) {
   for (let i = 0; i < till.length; i += 500) await db.insert(sales).values(till.slice(i, i + 500));
 
   await db.insert(activity).values(inserted.map((m, i) => ({ memberId: m.id, type: "member.created", message: "Member created", at: people[i].createdAt })));
+
+  // tags on a few members, so segments and filters have something to show
+  const tagSets = [["student"], ["vip"], ["competitor"], ["student", "morning"], ["staff"]];
+  for (let i = 0; i < inserted.length; i += 4) {
+    await db.update(members).set({ tags: tagSets[(i / 4) % tagSets.length] }).where(eq(members.id, inserted[i].id));
+  }
+  await seedExtra(db, r, now, inserted.map((m) => m.id), ms);
 }

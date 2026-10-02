@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { parseCSV } from "@/lib/csv";
 import type { DB } from "@/lib/db/client";
-import { activity, checkIns, credentials, members, memberships, sales } from "@/lib/db/schema";
+import { activity, cafeOrders, checkIns, credentials, expenses, leads, members, memberships, messages, ptBookings, sales, staff } from "@/lib/db/schema";
 import { generateAccessCode, generatePassToken } from "./codes";
 import { localDate } from "./dates";
 import { buildDraft, guessMapping, type ImportDraft, type ImportMapping } from "./glofox";
@@ -208,6 +208,9 @@ export async function runImport(db: DB, plan: ImportPlan, now = new Date()) {
 /** Settings → "Remove demo data": demo members, their visits, and demo till sales. */
 export async function removeDemoData(db: DB) {
   const demo = await db.select({ id: members.id }).from(members).where(inArray(members.source, ["demo"]));
+  for (const table of [cafeOrders, expenses, leads, ptBookings, messages]) await db.delete(table).where(eq((table as typeof leads).demo, true));
+  // demo staff take their shifts, timesheets and PT credit with them
+  await db.delete(staff).where(eq(staff.demo, true));
   await chunked(demo.map((d) => d.id), async (ids) => {
     await db.delete(checkIns).where(inArray(checkIns.memberId, ids));
     await db.delete(members).where(inArray(members.id, ids));

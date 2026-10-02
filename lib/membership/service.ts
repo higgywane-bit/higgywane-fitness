@@ -2,7 +2,7 @@ import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { GYM } from "@/content/gym";
 import { getPlan } from "@/content/plans";
 import type { DB } from "@/lib/db/client";
-import { activity, checkIns, credentials, members, memberships, type Member, type MembershipRow } from "@/lib/db/schema";
+import { activity, checkIns, credentials, members, memberships, ptSessions, staff, type Member, type MembershipRow } from "@/lib/db/schema";
 import {
   applyFreeze,
   endFreeze,
@@ -12,6 +12,7 @@ import {
   type AccessDecision,
   type DenyReason,
 } from "./access";
+import { currentActor } from "@/lib/staff/context";
 import { generateAccessCode, generatePassToken, normalizeCode } from "./codes";
 import { addDays, diffDays, isISODate, localDate, type ISODate } from "./dates";
 
@@ -55,8 +56,15 @@ export function fullName(m: Pick<Member, "firstName" | "lastName">) {
   return [m.firstName, m.lastName].filter(Boolean).join(" ");
 }
 
-export async function logActivity(db: DB, memberId: string | null, type: string, message: string, at = new Date()) {
-  await db.insert(activity).values({ memberId, type, message, at });
+export async function logActivity(
+  db: DB,
+  memberId: string | null,
+  type: string,
+  message: string,
+  at = new Date(),
+  extra: { leadId?: string | null } = {},
+) {
+  await db.insert(activity).values({ memberId, type, message, at, staffId: currentActor(), leadId: extra.leadId ?? null });
 }
 
 export async function findMemberByCode(db: DB, raw: string): Promise<Member | null> {
@@ -376,16 +384,30 @@ export async function cancelMembership(db: DB, id: string, reason?: string) {
   await logActivity(db, m.memberId, "membership.cancelled", `${m.planName} cancelled${reason ? ` · ${reason}` : ""}`);
 }
 
-export async function useSession(db: DB, id: string, delta: 1 | -1 = 1) {
+export async function useSession(db: DB, id: string, delta: 1 | -1 = 1, opts: { coachId?: string | null; at?: Date; status?: "done" | "no-show" } = {}) {
   const m = await getMembership(db, id);
   if (m.sessionsTotal == null) throw new ServiceError("This plan has no sessions.");
   const used = m.sessionsUsed + delta;
   if (used < 0 || used > m.sessionsTotal) throw new ServiceError(delta > 0 ? "No sessions left on this pack." : "Nothing to undo.");
   await db.update(memberships).set({ sessionsUsed: used }).where(eq(memberships.id, id));
+  if (delta > 0) {
+    await db.insert(ptSessions).values({
+      memberId: m.memberId,
+      membershipId: m.id,
+      coachId: opts.coachId ?? null,
+      at: opts.at ?? new Date(),
+      status: opts.status ?? "done",
+    });
+  } else {
+    const [last] = await db.select({ id: ptSessions.id }).from(ptSessions).where(eq(ptSessions.membershipId, id)).orderBy(desc(ptSessions.at)).limit(1);
+    if (last) await db.delete(ptSessions).where(eq(ptSessions.id, last.id));
+  }
+  const coach = opts.coachId ? (await db.select({ name: staff.name }).from(staff).where(eq(staff.id, opts.coachId)))[0]?.name : null;
+  const what = opts.status === "no-show" ? "PT no-show (session charged)" : "PT session used";
   await logActivity(
     db,
     m.memberId,
     delta > 0 ? "pt.session" : "pt.undo",
-    delta > 0 ? `PT session used · ${m.sessionsTotal - used} left` : `PT session given back · ${m.sessionsTotal - used} left`,
+    delta > 0 ? `${what}${coach ? ` with ${coach}` : ""} · ${m.sessionsTotal - used} left` : `PT session given back · ${m.sessionsTotal - used} left`,
   );
 }

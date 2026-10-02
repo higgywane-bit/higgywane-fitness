@@ -15,6 +15,13 @@
       "when": 1790982316439,
       "tag": "0001_dashboard_and_insights",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790984557050,
+      "tag": "0002_team_leads_cafe_money",
+      "breakpoints": true
     }
   ]
 }

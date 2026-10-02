@@ -149,7 +149,7 @@ export function CheckoutView() {
   useEffect(() => {
     if (!order || order.payment.method !== "promptpay" || status !== "pending") return;
     const t = setInterval(async () => {
-      const res = await paymentStatus(order.payment.id);
+      const res = await paymentStatus(order.payment.id, order.id);
       if (res.ok) setStatus(res.data.status);
     }, 2000);
     return () => clearInterval(t);

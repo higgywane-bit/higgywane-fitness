@@ -45,6 +45,8 @@ export const members = pgTable(
     /** secret for the member's pass link: /pass/<token> */
     passToken: text("pass_token").notNull().unique(),
     marketingOptIn: boolean("marketing_opt_in").notNull().default(true),
+    /** free labels for segments: student, vip, staff, competitor… */
+    tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
@@ -155,11 +157,14 @@ export const activity = pgTable(
   {
     id: id(),
     memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }),
+    /** who did it (the staff member working at the time) */
+    staffId: uuid("staff_id").references(() => staff.id, { onDelete: "set null" }),
     type: text("type").notNull(),
     message: text("message").notNull(),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("activity_member_idx").on(t.memberId, t.at)],
+  (t) => [index("activity_member_idx").on(t.memberId, t.at), index("activity_at_idx").on(t.at), index("activity_lead_idx").on(t.leadId)],
 );
 
 /** One row per reminder sent, so the daily job never emails twice. */
@@ -213,6 +218,216 @@ export const reportUploads = pgTable(
   (t) => [index("report_uploads_kind_idx").on(t.kind, t.uploadedAt)],
 );
 
+/* ── Team ─────────────────────────────────────────────────── */
+
+export type StaffRole = "owner" | "manager" | "desk" | "coach" | "cafe";
+
+export const staff = pgTable("staff", {
+  id: id(),
+  name: text("name").notNull(),
+  role: text("role").$type<StaffRole>().notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  /** sha-256 of the 4–6 digit PIN used to switch "who's working" at shared devices */
+  pinHash: text("pin_hash"),
+  /** links a coach to their public profile in content/coaches.ts */
+  coachSlug: text("coach_slug"),
+  /** THB per hour, for wage estimates */
+  hourlyRate: integer("hourly_rate"),
+  /** % of PT pack price paid to the coach per session delivered */
+  ptCommissionPct: integer("pt_commission_pct"),
+  color: text("color"),
+  active: boolean("active").notNull().default(true),
+  demo: boolean("demo").notNull().default(false),
+  createdAt: createdAt(),
+});
+
+/** Planned shifts on the rota. Times are gym-local HH:MM. */
+export const shifts = pgTable(
+  "shifts",
+  {
+    id: id(),
+    staffId: uuid("staff_id")
+      .notNull()
+      .references(() => staff.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    start: text("start").notNull(),
+    end: text("end").notNull(),
+    /** desk | cafe | floor | pt | cleaning */
+    area: text("area").notNull().default("desk"),
+    notes: text("notes"),
+  },
+  (t) => [index("shifts_date_idx").on(t.date)],
+);
+
+/** Clock in / clock out. An open entry has no clockOut. */
+export const timeEntries = pgTable(
+  "time_entries",
+  {
+    id: id(),
+    staffId: uuid("staff_id")
+      .notNull()
+      .references(() => staff.id, { onDelete: "cascade" }),
+    clockIn: timestamp("clock_in", { withTimezone: true }).notNull(),
+    clockOut: timestamp("clock_out", { withTimezone: true }),
+    note: text("note"),
+  },
+  (t) => [index("time_entries_staff_idx").on(t.staffId, t.clockIn)],
+);
+
+/* ── Sales pipeline ───────────────────────────────────────── */
+
+export type LeadStage = "new" | "contacted" | "trial" | "won" | "lost";
+
+export const leads = pgTable(
+  "leads",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    lineId: text("line_id"),
+    /** walk-in | instagram | facebook | website | line | referral | google | other */
+    source: text("source").notNull().default("walk-in"),
+    /** membership | pt | day-pass | cafe | other */
+    interest: text("interest").notNull().default("membership"),
+    stage: text("stage").$type<LeadStage>().notNull().default("new"),
+    notes: text("notes"),
+    ownerId: uuid("owner_id").references(() => staff.id, { onDelete: "set null" }),
+    nextFollowUp: date("next_follow_up"),
+    lostReason: text("lost_reason"),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
+    /** made-up demo data, removed by Settings → Remove demo data */
+    demo: boolean("demo").notNull().default(false),
+    stageChangedAt: timestamp("stage_changed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("leads_stage_idx").on(t.stage, t.createdAt)],
+);
+
+/* ── Coaching ─────────────────────────────────────────────── */
+
+/** One delivered (or missed) PT session, so coaches get credit and members see history. */
+export const ptSessions = pgTable(
+  "pt_sessions",
+  {
+    id: id(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    membershipId: uuid("membership_id").references(() => memberships.id, { onDelete: "set null" }),
+    coachId: uuid("coach_id").references(() => staff.id, { onDelete: "set null" }),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    /** done | no-show */
+    status: text("status").notNull().default("done"),
+    notes: text("notes"),
+  },
+  (t) => [index("pt_sessions_at_idx").on(t.at), index("pt_sessions_coach_idx").on(t.coachId, t.at)],
+);
+
+/** PT requests from the website booking form, handled by the desk or the coach. */
+export const ptBookings = pgTable(
+  "pt_bookings",
+  {
+    id: id(),
+    reference: text("reference").notNull(),
+    coachSlug: text("coach_slug").notNull(),
+    packageId: text("package_id"),
+    date: date("date").notNull(),
+    time: text("time").notNull(),
+    name: text("name").notNull(),
+    contact: text("contact").notNull(),
+    goal: text("goal"),
+    note: text("note"),
+    /** requested | confirmed | declined | done */
+    status: text("status").notNull().default("requested"),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
+    /** made-up demo data, removed by Settings → Remove demo data */
+    demo: boolean("demo").notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index("pt_bookings_date_idx").on(t.date)],
+);
+
+/* ── Cafe ─────────────────────────────────────────────────── */
+
+export type CafeOrderStatus = "new" | "preparing" | "ready" | "collected" | "cancelled";
+
+/** Orders placed on the website, shown on the bar's order board. */
+export const cafeOrders = pgTable(
+  "cafe_orders",
+  {
+    /** same id the customer's confirmation page uses */
+    id: uuid("id").primaryKey(),
+    number: text("number").notNull(),
+    status: text("status").$type<CafeOrderStatus>().notNull().default("new"),
+    customerName: text("customer_name").notNull(),
+    contact: text("contact"),
+    /** takeaway | dine-in */
+    serviceMode: text("service_mode").notNull(),
+    table: text("table"),
+    pickupTime: text("pickup_time"),
+    note: text("note"),
+    lines: jsonb("lines").$type<{ name: string; qty: number; summary: string[]; note?: string; unitPrice: number }[]>().notNull(),
+    /** whole THB, like the menu */
+    subtotal: integer("subtotal").notNull(),
+    protein: integer("protein"),
+    kcal: integer("kcal"),
+    paymentMethod: text("payment_method").notNull(),
+    paymentStatus: text("payment_status").notNull(),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
+    /** made-up demo data, removed by Settings → Remove demo data */
+    demo: boolean("demo").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("cafe_orders_created_idx").on(t.createdAt), index("cafe_orders_status_idx").on(t.status)],
+);
+
+/* ── Money out ────────────────────────────────────────────── */
+
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: id(),
+    date: date("date").notNull(),
+    /** rent | wages | cafe-stock | supplements | equipment | utilities | marketing | maintenance | software | other */
+    category: text("category").notNull(),
+    description: text("description").notNull(),
+    vendor: text("vendor"),
+    amountSatang: integer("amount_satang").notNull(),
+    /** none | monthly: monthly ones repeat in profit & loss until ended */
+    recurring: text("recurring").notNull().default("none"),
+    endsOn: date("ends_on"),
+    paymentMethod: text("payment_method"),
+    staffId: uuid("staff_id").references(() => staff.id, { onDelete: "set null" }),
+    /** made-up demo data, removed by Settings → Remove demo data */
+    demo: boolean("demo").notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index("expenses_date_idx").on(t.date)],
+);
+
+/* ── Messages ─────────────────────────────────────────────── */
+
+export const messages = pgTable("messages", {
+  id: id(),
+  /** email | line */
+  channel: text("channel").notNull(),
+  audience: text("audience").notNull(),
+  audienceLabel: text("audience_label").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  recipients: integer("recipients").notNull(),
+  sent: integer("sent").notNull().default(0),
+  /** sent | preview (no mail provider connected) */
+  status: text("status").notNull(),
+  staffId: uuid("staff_id").references(() => staff.id, { onDelete: "set null" }),
+  demo: boolean("demo").notNull().default(false),
+  createdAt: createdAt(),
+});
+
 export type Member = typeof members.$inferSelect;
 export type Credential = typeof credentials.$inferSelect;
 export type MembershipRow = typeof memberships.$inferSelect;
@@ -220,3 +435,12 @@ export type CheckInRow = typeof checkIns.$inferSelect;
 export type SaleRow = typeof sales.$inferSelect;
 export type ActivityRow = typeof activity.$inferSelect;
 export type ReportUpload = typeof reportUploads.$inferSelect;
+export type Staff = typeof staff.$inferSelect;
+export type Shift = typeof shifts.$inferSelect;
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type Lead = typeof leads.$inferSelect;
+export type PtSession = typeof ptSessions.$inferSelect;
+export type PtBooking = typeof ptBookings.$inferSelect;
+export type CafeOrderRow = typeof cafeOrders.$inferSelect;
+export type Expense = typeof expenses.$inferSelect;
+export type MessageRow = typeof messages.$inferSelect;

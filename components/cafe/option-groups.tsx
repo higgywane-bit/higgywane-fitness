@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { MenuItem, Option, OptionGroup, Selections } from "@/content/types";
 import { formatTHBDelta } from "@/lib/format";
 import { optionImpact } from "@/lib/nutrition";
@@ -41,7 +41,10 @@ function GroupHeader({ group, count }: { group: OptionGroup; count: number }) {
   );
 }
 
+const POP = { type: "spring", stiffness: 500, damping: 26 } as const;
+
 function SingleGroup({ item, group, selections, onToggle }: Props) {
+  const reduce = useReducedMotion();
   const current = selections[group.id]?.[0];
   const cols = group.options.length === 2 ? "grid-cols-2" : group.options.length === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
@@ -57,31 +60,16 @@ function SingleGroup({ item, group, selections, onToggle }: Props) {
             role="radio"
             aria-checked={on}
             onClick={() => onToggle(group.id, o.id)}
+            whileTap={reduce ? undefined : { scale: 0.96 }}
             className={cn(
-              "tap relative flex min-h-[60px] flex-col items-start justify-center rounded-2xl border px-3.5 py-2.5 text-left",
+              "tap relative flex min-h-[60px] flex-col items-start justify-center rounded-2xl border px-3.5 py-2.5 text-left transition-colors duration-200",
               on ? "border-white bg-white text-black" : "border-hairline-strong bg-surface-2 hover:border-white/30",
             )}
-            animate={{
-              backgroundColor: on ? "rgb(255, 255, 255)" : "transparent",
-              borderColor: on ? "rgb(255, 255, 255)" : "currentColor",
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            whileTap={{ scale: 0.95 }}
           >
-            <motion.span
-              className="text-[15px] leading-tight font-semibold"
-              animate={{ color: on ? "rgb(0, 0, 0)" : "rgb(229, 231, 235)" }}
-              transition={{ duration: 0.15 }}
-            >
-              {o.label}
-            </motion.span>
-            <motion.span
-              className={cn("mt-0.5 text-xs leading-tight")}
-              animate={{ color: on ? "rgb(0, 0, 0, 0.6)" : "rgb(107, 114, 128)" }}
-              transition={{ duration: 0.15 }}
-            >
+            <span className="text-[15px] leading-tight font-semibold">{o.label}</span>
+            <span className={cn("mt-0.5 text-xs leading-tight", on ? "text-black/60" : "text-text-tertiary")}>
               {[o.detail, price].filter(Boolean).join("  ") || impact || " "}
-            </motion.span>
+            </span>
           </motion.button>
         );
       })}
@@ -90,6 +78,7 @@ function SingleGroup({ item, group, selections, onToggle }: Props) {
 }
 
 function MultiGroup({ item, group, selections, onToggle }: Props) {
+  const reduce = useReducedMotion();
   const current = selections[group.id] ?? [];
   const full = group.max !== undefined && current.length >= group.max;
   return (
@@ -106,63 +95,46 @@ function MultiGroup({ item, group, selections, onToggle }: Props) {
               aria-checked={on}
               aria-disabled={disabled}
               onClick={() => !disabled && onToggle(group.id, o.id)}
+              whileTap={reduce || disabled ? undefined : { scale: 0.98 }}
               className={cn(
-                "flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                disabled ? "cursor-not-allowed opacity-40" : "hover:bg-surface-3 active:scale-[0.98]",
+                "flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-200",
+                disabled ? "cursor-not-allowed opacity-40" : "hover:bg-surface-3",
+                on && "bg-red-tint hover:bg-red-tint",
               )}
-              whileTap={{ scale: disabled ? 1 : 0.98 }}
             >
-              <motion.span
+              <span
                 aria-hidden
                 className={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full border",
-                  on ? "border-red bg-red text-white" : "border-hairline-strong bg-surface-2",
+                  "grid size-6 shrink-0 place-items-center rounded-full border transition-colors duration-200",
+                  on ? "border-red bg-red text-white" : "border-hairline-strong",
                 )}
-                animate={{
-                  backgroundColor: on ? "rgb(220, 38, 38)" : "transparent",
-                  borderColor: on ? "rgb(220, 38, 38)" : "currentColor",
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
               >
-                <AnimatePresence mode="wait">
+                <AnimatePresence initial={false}>
                   {on ? (
-                    <motion.div
+                    <motion.span
                       key="check"
-                      initial={{ scale: 0, rotate: -90 }}
+                      initial={reduce ? false : { scale: 0, rotate: -45 }}
                       animate={{ scale: 1, rotate: 0 }}
-                      exit={{ scale: 0, rotate: 90 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                      exit={reduce ? undefined : { scale: 0, transition: { duration: 0.12 } }}
+                      transition={POP}
                     >
-                      <Check className="size-3.5 stroke-white" strokeWidth={3} />
-                    </motion.div>
+                      <Check className="size-3.5" strokeWidth={3} />
+                    </motion.span>
                   ) : null}
                 </AnimatePresence>
-              </motion.span>
-              <motion.span
-                className="min-w-0 flex-1"
-                animate={{ opacity: disabled ? 0.6 : 1 }}
-                transition={{ duration: 0.15 }}
-              >
+              </span>
+              <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-medium">{o.label}</span>
                 {o.detail ? <span className="block text-xs text-text-tertiary">{o.detail}</span> : null}
-              </motion.span>
-              <motion.span
-                className="shrink-0 text-right"
-                animate={{ opacity: disabled ? 0.6 : 1, scale: on ? 1.05 : 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              >
+              </span>
+              <span className="shrink-0 text-right">
                 <span className="tabular block text-[15px] font-semibold">{formatTHBDelta(o.priceDelta)}</span>
                 {impact ? (
-                  <motion.span
-                    className={cn("tabular block text-xs", impact.includes("protein") ? "text-red-text" : "text-text-tertiary")}
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
+                  <span className={cn("tabular block text-xs", impact.includes("protein") ? "text-red-text" : "text-text-tertiary")}>
                     {impact}
-                  </motion.span>
+                  </span>
                 ) : null}
-              </motion.span>
+              </span>
             </motion.button>
           </li>
         );
@@ -172,6 +144,7 @@ function MultiGroup({ item, group, selections, onToggle }: Props) {
 }
 
 function RemoveGroup({ group, selections, onToggle }: Props) {
+  const reduce = useReducedMotion();
   const current = selections[group.id] ?? [];
   return (
     <div aria-labelledby={`grp-${group.id}`} className="flex flex-wrap gap-2">
@@ -184,36 +157,23 @@ function RemoveGroup({ group, selections, onToggle }: Props) {
             role="checkbox"
             aria-checked={on}
             onClick={() => onToggle(group.id, o.id)}
+            whileTap={reduce ? undefined : { scale: 0.94 }}
             className={cn(
-              "tap flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium",
+              "tap flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors duration-200",
               on ? "border-white bg-white text-black" : "border-hairline-strong text-text-secondary hover:text-white",
             )}
-            animate={{
-              backgroundColor: on ? "rgb(255, 255, 255)" : "transparent",
-              borderColor: on ? "rgb(255, 255, 255)" : "currentColor",
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            whileTap={{ scale: 0.93 }}
           >
-            <AnimatePresence mode="wait">
-              {on ? (
-                <motion.div
-                  key="x"
-                  initial={{ scale: 0, rotate: 90 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  exit={{ scale: 0, rotate: -90 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <X className="size-4 stroke-black" strokeWidth={2.5} aria-hidden />
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-            <motion.span
-              animate={{ color: on ? "rgb(0, 0, 0)" : "currentColor" }}
-              transition={{ duration: 0.15 }}
-            >
-              {o.label}
-            </motion.span>
+            {on ? (
+              <motion.span
+                aria-hidden
+                initial={reduce ? false : { scale: 0, rotate: 90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={POP}
+              >
+                <X className="size-4" strokeWidth={2.5} />
+              </motion.span>
+            ) : null}
+            {o.label}
           </motion.button>
         );
       })}

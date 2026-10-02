@@ -244,3 +244,7 @@
 @keyframes dialog-out {
   to { opacity: 0; transform: translate(-50%, -49%) scale(0.98); }
 }
+@keyframes leah-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}

@@ -180,6 +180,16 @@ Payment methods to support: **Thai QR / PromptPay**, **Apple Pay** (and Google P
 - Candidates when connecting: **Opn Payments (Omise)** or **2C2P** cover PromptPay + Apple Pay + cards in Thailand; Qashier via its merchant/API integration if available, otherwise orders show on the counter and are charged on the terminal.
 - Orders and payment state go through a server action / API route so secrets never reach the browser.
 
+### 4.6 Leah: chat assistant
+
+Floating chat for visitors: "Leah at Superfit customer service". English, Thai and Russian.
+
+- **Bubble**: Leah's circular portrait, bottom corner above the tab bar. Drag it to either edge; drag it onto the target that appears to hide it for the visit (Undo toast). Desktop also shows a small hide button on hover. Hidden on checkout, order and product pages; lifted above the booking bar on coach profiles.
+- **Chat**: bottom sheet on mobile, floating non-modal panel on desktop. Header: avatar, name, EN / ไทย / RU, new chat, close. Empty state: greeting and four starter prompts; visitors can always type.
+- **Brain**: `app/api/leah/route.ts` streams replies from Claude (`LEAH_MODEL`, default `claude-opus-5-5`, low effort for speed). Knowledge is built from `content/` (prices, PT, coaches, menu with macros, hours) plus the owner's free-form guide in `content/leah/guide.md`, and cached between requests. Live time and open/closed status are added per request.
+- **Offline mode**: without `ANTHROPIC_API_KEY` (or if the API is unreachable) Leah answers common questions from the same data, so previews and local dev still work.
+- Content: `content/business.ts` (hours, address, LINE), `content/leah/persona.ts` (photo, copy in three languages).
+
 ---
 
 ## 5. Project structure

@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <>
       <section className="relative isolate overflow-hidden">
-        <div className="relative h-[min(68dvh,560px)] md:h-[min(78dvh,720px)]">
+        <div className="relative h-[440px] md:h-[min(68dvh,640px)]">
           {/* TODO: confirm with owner (replace poster crop with a proper hero photo or video) */}
           <Image
             src="/images/coaches/team-poster-crop.jpg"
@@ -21,12 +21,12 @@ export default function HomePage() {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-[50%_20%] md:object-contain md:object-top"
+            className="object-cover object-[55%_25%] md:object-contain md:object-top"
           />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         </div>
-        <div className="relative mx-auto -mt-44 max-w-7xl px-4 pb-10 md:-mt-56 md:px-8">
-          <h1 className="text-statement text-[72px] md:text-[140px]">
+        <div className="relative mx-auto -mt-36 max-w-7xl px-4 pb-10 md:-mt-48 md:px-8">
+          <h1 className="text-statement text-[68px] md:text-[120px]">
             Train
             <br />
             with us

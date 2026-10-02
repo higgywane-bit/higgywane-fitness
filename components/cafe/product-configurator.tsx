@@ -272,11 +272,10 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
         <div className="space-y-6 px-4 pt-4 md:sticky md:top-24 md:self-start md:px-0 md:pt-0">
           {header}
           {intro}
-          <div className="hidden space-y-6 md:block">{details}</div>
+          {details}
         </div>
         <div className="flex flex-col">
           <div className="space-y-7 px-4 pt-6 pb-8 md:px-0 md:pt-0">
-            <div className="space-y-6 md:hidden">{details}</div>
             {options}
           </div>
           {footer}

@@ -51,9 +51,14 @@ export function MenuView() {
     return () => io.disconnect();
   }, [searching]);
 
-  // Keep the active chip in view.
+  // Keep the active chip in view. Scroll only the chip row: scrollIntoView would also
+  // move the window and cancel the smooth scroll started by a chip tap.
   useEffect(() => {
-    chipRefs.current[active]?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    const chip = chipRefs.current[active];
+    const row = chip?.closest("ul");
+    if (!chip || !row) return;
+    const left = chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2;
+    row.scrollTo({ left, behavior: "smooth" });
   }, [active]);
 
   const jump = (id: CategoryId) => {
@@ -63,7 +68,9 @@ export function MenuView() {
     requestAnimationFrame(() => {
       const el = document.getElementById(`cat-${id}`);
       if (!el) return;
-      const offset = (stickyRef.current?.getBoundingClientRect().bottom ?? 120) + 8;
+      // Where the bar sits once stuck (its CSS top + height), not where it is right now.
+      const bar = stickyRef.current;
+      const offset = bar ? parseFloat(getComputedStyle(bar).top) + bar.offsetHeight : 160;
       const top = el.getBoundingClientRect().top + window.scrollY - offset;
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
@@ -107,7 +114,7 @@ export function MenuView() {
           </div>
 
           <nav aria-label="Menu categories" className="-mx-4 md:mx-0 md:min-w-0 md:flex-1">
-            <ul className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2.5 md:px-0 md:py-0">
+            <ul className="no-scrollbar relative flex gap-2 overflow-x-auto px-4 py-2.5 md:px-0 md:py-0">
               {categories.map((c) => {
                 const on = !searching && active === c.id;
                 return (

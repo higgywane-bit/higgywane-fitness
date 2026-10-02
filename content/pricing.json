@@ -1,0 +1,83 @@
+{
+  "brand": "Superfit",
+  "currency": "THB",
+
+  "sections": {
+    "memberships": {
+      "title": "Gym Memberships",
+      "products": [
+        { "name": "Day Pass", "description": "Single visit", "price": 250 },
+        { "name": "1 Week", "description": "7 days unlimited", "price": 1200 },
+        { "name": "2 Weeks", "description": "14 days unlimited", "price": 1800 },
+        { "name": "1 Month", "description": "30 days unlimited", "price": 2200 },
+        { "name": "3 Months", "price": 5400, "badge": "Popular", "saving": 1200 },
+        { "name": "6 Months", "price": 9000, "saving": 4200 },
+        { "name": "12 Months", "price": 12000, "badge": "Best Value", "saving": 14400 }
+      ]
+    },
+
+    "personal_training": {
+      "title": "Personal Training",
+      "products": [
+        { "name": "1 PT Session", "sessions": 1, "price": 1700, "price_per_session": 1700 },
+        { "name": "3 PT Sessions", "sessions": 3, "price": 5000, "price_per_session": 1666 },
+        { "name": "10 PT Sessions", "sessions": 10, "price": 15000, "price_per_session": 1500 },
+        { "name": "20 PT Sessions", "sessions": 20, "price": 27000, "price_per_session": 1350 }
+      ]
+    },
+
+    "cafe": {
+      "title": "Superfit Cafe",
+      "categories": {
+        "smoothies": {
+          "title": "Smoothies",
+          "products": [
+            { "name": "Berry Hype", "description": "High-antioxidant berry recovery", "price_from": 149 },
+            { "name": "Espresso Max", "description": "Coffee + protein energy boost", "price_from": 149 },
+            { "name": "Skinny & Rich", "description": "Low-cal chocolate protein", "price_from": 149 },
+            { "name": "Banana Bam Bam", "description": "Creamy banana performance", "price_from": 149 },
+            { "name": "Strong Vibes", "description": "Peanut butter performance", "price_from": 149 },
+            { "name": "Thick", "description": "Mass gainer · high cal · high protein", "price_from": 149 }
+          ]
+        },
+
+        "juices": {
+          "title": "Juices",
+          "products": [
+            { "name": "Bangkok Beat", "ingredients": ["Orange", "Pineapple", "Banana", "Ginger"], "price_from": 95 },
+            { "name": "Blow My Head Off", "ingredients": ["Orange", "Carrot", "Ginger", "Turmeric", "Cayenne"], "price_from": 110 },
+            { "name": "A5", "ingredients": ["Apple", "Pineapple", "Spinach"], "price_from": 95 },
+            { "name": "OJ Classic", "description": "Fresh pressed oranges", "price_from": 85 }
+          ]
+        },
+
+        "coffee": {
+          "title": "Coffee",
+          "products": [
+            { "name": "Espresso", "description": "Single or double", "price": 60 },
+            { "name": "Americano", "description": "Hot or iced", "price": 80 },
+            { "name": "Latte", "description": "Double shot · steamed milk", "price": 120 },
+            { "name": "Cappuccino", "description": "Double shot · thick foam", "price": 120 },
+            { "name": "Matcha Latte", "description": "Ceremonial grade matcha", "price": 140 },
+            { "name": "Mocha", "description": "Espresso · cacao · milk", "price": 130 }
+          ]
+        },
+
+        "performance": {
+          "title": "Performance",
+          "status": "Pricing/products not provided yet",
+          "products": []
+        }
+      }
+    }
+  },
+
+  "section_overview": [
+    "Gym Memberships",
+    "Personal Training",
+    "Cafe - Smoothies",
+    "Cafe - Juices",
+    "Cafe - Coffee",
+    "Cafe - Performance"
+  ]
+}

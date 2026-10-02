@@ -3,38 +3,14 @@ import type { DB } from "@/lib/db/client";
 import { activity, leads, type Lead, type LeadStage } from "@/lib/db/schema";
 import { isISODate } from "@/lib/membership/dates";
 import { createMember, logActivity, normalizeEmail, normalizePhone, ServiceError } from "@/lib/membership/service";
+import { INTERESTS, SOURCES, STAGES } from "./constants";
+
+export { INTERESTS, SOURCES, STAGES };
 
 /*
  * Enquiries before they become members: walk-ins, Instagram DMs, website forms.
  * Stages: new → contacted → trial → won (became a member) / lost.
  */
-
-export const STAGES: { id: LeadStage; label: string }[] = [
-  { id: "new", label: "New" },
-  { id: "contacted", label: "Contacted" },
-  { id: "trial", label: "Trial / visited" },
-  { id: "won", label: "Joined" },
-  { id: "lost", label: "Lost" },
-];
-
-export const SOURCES = {
-  "walk-in": "Walk-in",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  website: "Website",
-  line: "LINE",
-  referral: "Referral",
-  google: "Google",
-  other: "Other",
-} as const;
-
-export const INTERESTS = {
-  membership: "Membership",
-  pt: "Personal training",
-  "day-pass": "Day pass",
-  cafe: "Cafe",
-  other: "Other",
-} as const;
 
 export type LeadInput = {
   name: string;

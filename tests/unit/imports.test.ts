@@ -76,3 +76,11 @@ describe("qashier", () => {
     expect(skipped).toHaveLength(1);
   });
 });
+
+describe("toCSV", () => {
+  it("quotes, keeps numbers and phones, and defuses formulas", async () => {
+    const { toCSV } = await import("@/lib/csv");
+    const out = toCSV(["a", "b"], [["+66812345678", "=SUM(A1)"], ["-12.5", 'say "hi", ok']]);
+    expect(out).toBe('﻿a,b\r\n+66812345678,\'=SUM(A1)\r\n-12.5,"say ""hi"", ok"');
+  });
+});

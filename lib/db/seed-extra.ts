@@ -156,7 +156,8 @@ export async function seedExtra(db: DB, r: R, now: Date, memberIds: string[], ms
     const date = addDays(today, -d);
     const n = d === 0 ? 9 : 3 + Math.floor(r() * 6);
     for (let k = 0; k < n; k++) {
-      const created = at(date, hm(6 * 60 + 30 + Math.floor(r() * 13 * 60)));
+      // today's orders land in the last 90 minutes so the live board is busy whenever you look
+      const created = d === 0 ? new Date(now.getTime() - Math.floor(r() * 90) * 60_000) : at(date, hm(6 * 60 + 30 + Math.floor(r() * 13 * 60)));
       if (created > now) continue;
       const lines = Array.from({ length: r() > 0.7 ? 2 : 1 }, () => {
         const it = pick(items);
@@ -189,8 +190,8 @@ export async function seedExtra(db: DB, r: R, now: Date, memberIds: string[], ms
   /* costs: rent, wages, software monthly; utilities and stock as they come */
   const yearAgo = `${addMonths(today, -13).slice(0, 8)}01`;
   const costs: (typeof expenses.$inferInsert)[] = [
-    { date: yearAgo, category: "rent", description: "Gym and cafe rent", vendor: "Landlord", amountSatang: 8_500_000, recurring: "monthly", demo: true },
-    { date: addDays(yearAgo, 24), category: "wages", description: "Staff salaries", amountSatang: 14_000_000, recurring: "monthly", demo: true },
+    { date: yearAgo, category: "rent", description: "Gym and cafe rent", vendor: "Landlord", amountSatang: 4_500_000, recurring: "monthly", demo: true },
+    { date: addDays(yearAgo, 24), category: "wages", description: "Staff salaries", amountSatang: 6_000_000, recurring: "monthly", demo: true },
     { date: addDays(yearAgo, 4), category: "software", description: "Qashier + website hosting", vendor: "Qashier", amountSatang: 250_000, recurring: "monthly", demo: true },
     { date: addDays(yearAgo, 9), category: "software", description: "Glofox subscription", vendor: "Glofox", amountSatang: 690_000, recurring: "monthly", endsOn: addDays(today, 20), demo: true },
     { date: addDays(today, -40), category: "equipment", description: "New cable machine", vendor: "Fitness supplier", amountSatang: 4_500_000, demo: true },
@@ -198,11 +199,11 @@ export async function seedExtra(db: DB, r: R, now: Date, memberIds: string[], ms
   for (let mth = 12; mth >= 0; mth--) {
     const base = addMonths(`${today.slice(0, 8)}01`, -mth);
     if (base > today) continue;
-    costs.push({ date: addDays(base, 14), category: "utilities", description: "Electricity", vendor: "PEA", amountSatang: Math.round((18000 + r() * 7000) * 100), demo: true });
+    costs.push({ date: addDays(base, 14), category: "utilities", description: "Electricity", vendor: "PEA", amountSatang: Math.round((9000 + r() * 4000) * 100), demo: true });
     costs.push({ date: addDays(base, 2), category: "marketing", description: "Instagram ads", amountSatang: Math.round((5000 + r() * 6000) * 100), demo: true });
     for (let w = 0; w < 4; w++) {
       const day = addDays(base, 1 + w * 7);
-      if (day <= today) costs.push({ date: day, category: "cafe-stock", description: "Cafe stock (milk, fruit, whey)", vendor: "Makro", amountSatang: Math.round((6000 + r() * 4000) * 100), demo: true });
+      if (day <= today) costs.push({ date: day, category: "cafe-stock", description: "Cafe stock (milk, fruit, whey)", vendor: "Makro", amountSatang: Math.round((3500 + r() * 2500) * 100), demo: true });
     }
   }
   await db.insert(expenses).values(costs);

@@ -91,3 +91,14 @@ export function parseLooseDate(raw: string, dayFirst = true): string | null {
   if (m) return out(y(+m[3]), months.indexOf(m[1].toLowerCase()) + 1, +m[2]);
   return null;
 }
+
+/** Write rows as CSV (Excel-friendly: BOM, quoted where needed, CRLF). */
+export function toCSV(headers: string[], rows: (string | number | null | undefined)[][]): string {
+  const cell = (v: string | number | null | undefined) => {
+    const s = v == null ? "" : String(v);
+    // guard against spreadsheet formula injection
+    const safe = /^[=+\-@]/.test(s) && !/^[+-]?[\d.,\s]+$/.test(s) ? `'${s}` : s;
+    return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  };
+  return "﻿" + [headers, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
+}

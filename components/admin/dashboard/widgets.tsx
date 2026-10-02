@@ -10,7 +10,7 @@ import { widgetMeta, type WidgetId } from "@/lib/dashboard/catalog";
 import type { KpiData } from "@/lib/dashboard/data";
 import { formatPhone, formatTHB } from "@/lib/format";
 import { daysLeftLabel, expiredLabel } from "@/lib/membership/access";
-import { formatDate, formatMoment } from "@/lib/membership/dates";
+import { formatDate, formatMoment, localDate } from "@/lib/membership/dates";
 import { cn } from "@/lib/utils";
 
 /* Renderers: one per module. Data shapes come from LOADERS in lib/dashboard/data.ts. */
@@ -31,6 +31,7 @@ const noSales = (
 
 function fmtKpi(d: KpiData) {
   if (d.format === "thb") return formatTHB(d.value);
+  if (d.format === "pct") return `${d.value}%`;
   if (d.format === "decimal") return d.value.toFixed(1);
   return String(d.value);
 }
@@ -166,6 +167,110 @@ export const RENDERERS: Record<WidgetId, React.ComponentType<{ data: never }>> =
       </ul>
     ) : (
       noSales
+    ),
+
+  "kpi-profit-month": Kpi("kpi-profit-month"),
+  "kpi-costs-month": Kpi("kpi-costs-month"),
+  "kpi-renewal-rate": Kpi("kpi-renewal-rate"),
+  "kpi-churn": Kpi("kpi-churn"),
+  "kpi-open-leads": Kpi("kpi-open-leads"),
+  "kpi-cafe-orders": Kpi("kpi-cafe-orders"),
+  "kpi-pt-month": Kpi("kpi-pt-month"),
+  targets: ({ data }: { data: { rows: { label: string; value: number; target: number | null; money: boolean }[] } }) =>
+    data.rows.length ? (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {data.rows.map((r) => {
+          const share = Math.min(1, r.value / (r.target ?? 1));
+          const f = (n: number) => (r.money ? formatTHB(n) : String(Math.round(n)));
+          return (
+            <div key={r.label}>
+              <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-text-secondary">{r.label}</span>
+                <span className="tabular">
+                  <span className="font-semibold">{f(r.value)}</span>
+                  <span className="text-text-tertiary"> / {f(r.target ?? 0)}</span>
+                </span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className={cn("h-full rounded-full", share >= 1 ? "bg-success" : "bg-white/80")} style={{ width: `${share * 100}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <Empty>
+        No targets yet. <Link href="/admin/performance" className="text-white underline underline-offset-4">Set them on Performance</Link>.
+      </Empty>
+    ),
+  "profit-monthly": ({ data }: { data: Series & { losses: number } }) =>
+    data.empty ? (
+      noSales
+    ) : (
+      <>
+        <BarChart data={data.series} today={data.today} unit="thb" tickEvery={2} labelFormat="month" />
+        {data.losses ? <p className="mt-2 text-xs text-energy">{data.losses} month{data.losses > 1 ? "s" : ""} ran at a loss (shown empty).</p> : null}
+      </>
+    ),
+  "at-risk": ({ data }: { data: Members }) =>
+    data.rows.length ? (
+      <ul className="-mx-2">
+        {data.rows.slice(0, 7).map((m) => (
+          <li key={m.id}>
+            <MemberRow
+              m={m}
+              sub={m.phone ? formatPhone(m.phone) : (m.email ?? m.plan)}
+              right={<span className="shrink-0 text-xs text-energy">{m.lastVisit ? `Last in ${formatDate(localDate(new Date(m.lastVisit)), data.today)}` : "Never visited"}</span>}
+            />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <Empty>Every active member has been in during the last 2 weeks.</Empty>
+    ),
+  "follow-ups": ({ data }: { data: { rows: { id: string; name: string; phone: string | null; source: string; next: string | null }[]; today: string } }) =>
+    data.rows.length ? (
+      <ul className="divide-y divide-hairline">
+        {data.rows.map((l) => (
+          <li key={l.id}>
+            <Link href="/admin/leads" className="flex min-h-12 items-center gap-3 text-sm hover:text-white">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">{l.name}</span>
+                <span className="block text-xs text-text-secondary">{l.phone ? formatPhone(l.phone) : l.source}</span>
+              </span>
+              <span className={cn("shrink-0 text-xs font-semibold", l.next && l.next < data.today ? "text-energy" : "text-text-secondary")}>
+                {l.next === data.today ? "Today" : l.next ? `Overdue · ${formatDate(l.next, data.today)}` : ""}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <Empty>No follow-ups due.</Empty>
+    ),
+  "on-shift": ({ data }: { data: { rows: { id: string; name: string; role: string; color: string | null; shifts: string[]; clockedInAt: string | null; hours: number }[] } }) =>
+    data.rows.length ? (
+      <ul className="divide-y divide-hairline">
+        {data.rows.map((p) => (
+          <li key={p.id}>
+            <Link href={`/admin/staff/${p.id}`} className="flex min-h-12 items-center gap-3 text-sm hover:text-white">
+              <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color ?? "#fff" }} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">{p.name}</span>
+                <span className="block text-xs text-text-secondary capitalize">
+                  {p.role}
+                  {p.shifts.length ? ` · ${p.shifts.join(", ")}` : ""}
+                </span>
+              </span>
+              <span className={cn("shrink-0 text-xs font-semibold", p.clockedInAt ? "text-success" : "text-text-tertiary")}>
+                {p.clockedInAt ? `In since ${formatMoment(new Date(p.clockedInAt)).split(" ").pop()}` : p.hours ? `${p.hours} h today` : "Not in yet"}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <Empty>Nobody on the rota today.</Empty>
     ),
 };
 

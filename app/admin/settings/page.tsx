@@ -167,6 +167,36 @@ export default async function SettingsPage() {
           </ul>
         </Panel>
 
+        <Panel title="Exports (CSV)">
+          <p className="mb-4 text-sm text-text-secondary">For your accountant, backups, or moving data. Opens in Excel, Numbers and Google Sheets.</p>
+          <ul className="grid grid-cols-2 gap-2">
+            {[
+              ["members", "Members"],
+              ["check-ins", "Check-ins · 90 days"],
+              ["sales", "Sales · 12 months"],
+              ["expenses", "Expenses · 12 months"],
+              ["leads", "Leads"],
+              ["timesheets", "Timesheets · 2 months"],
+              ["pt-sessions", "PT sessions"],
+            ].map(([k, label]) => (
+              <li key={k}>
+                <a href={`/admin/export/${k}`} download className="tap glass flex h-11 items-center justify-center rounded-full px-4 text-sm font-medium hover:bg-white/[0.07]">
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel title="Team access">
+          <p className="text-sm text-text-secondary">
+            Until real logins are connected, each device picks <span className="text-white">who&apos;s working</span> (bottom of the menu). Staff with a PIN must enter it. Everything they do is labelled with their name in the Activity log. Demo data: the Owner&apos;s PIN is 1234.
+          </p>
+          <Button asChild variant="outline" className="mt-4">
+            <Link href="/admin/staff">Manage staff</Link>
+          </Button>
+        </Panel>
+
         <Panel title="Demo data">
           <p className="mb-4 text-sm text-text-secondary">
             {demo ? `${demo} made-up members, visits and sales are loaded so every screen has something to show. Remove them before the real import.` : "Only real data is loaded."}

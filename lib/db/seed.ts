@@ -143,6 +143,22 @@ export async function seedDemo(db: DB, now = new Date()) {
     // the cafe has grown: fewer sales further back
     const growth = 1 - day / 900;
     const n = Math.round(growth * 18) + Math.floor(r() * 22) + (new Date(`${date}T00:00:00Z`).getUTCDay() % 6 === 0 ? 10 : 0);
+    // older history: membership and PT sales at the till (recent ones come from the demo members below)
+    if (day >= 60) {
+      for (let k = 0; k < 1 + Math.floor(r() * 3); k++) {
+        const plan = pick(PLANS.filter((p) => p.id !== "12-months" || r() > 0.7));
+        till.push({
+          source: "demo",
+          externalId: `R${receipt++}`,
+          occurredAt: new Date(`${date}T${String(8 + Math.floor(r() * 11)).padStart(2, "0")}:15:00+07:00`),
+          amountSatang: plan.price * 100,
+          category: plan.kind === "pt" ? "pt" : "membership",
+          description: plan.name,
+          paymentMethod: "Card",
+          items: [{ name: plan.name, qty: 1, amountSatang: plan.price * 100 }],
+        });
+      }
+    }
     for (let k = 0; k < n; k++) {
       const hour = 6 + Math.floor(r() * 15);
       const at = new Date(`${date}T${String(hour).padStart(2, "0")}:${String(Math.floor(r() * 60)).padStart(2, "0")}:00+07:00`);

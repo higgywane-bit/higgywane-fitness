@@ -104,10 +104,25 @@ export async function getMemberDetail(id: string, now = new Date()) {
       .from(t.checkIns)
       .where(and(eq(t.checkIns.memberId, id), gte(t.checkIns.at, new Date(now.getTime() - 400 * 86_400_000))))
       .orderBy(desc(t.checkIns.at)),
-    db.select().from(t.activity).where(eq(t.activity.memberId, id)).orderBy(desc(t.activity.at)).limit(40),
+    db
+      .select({ a: t.activity, staffName: t.staff.name })
+      .from(t.activity)
+      .leftJoin(t.staff, eq(t.staff.id, t.activity.staffId))
+      .where(eq(t.activity.memberId, id))
+      .orderBy(desc(t.activity.at))
+      .limit(60),
   ]);
+  const [coachRows, ptLog] = await Promise.all([
+    db.select({ id: t.staff.id, name: t.staff.name }).from(t.staff).where(and(eq(t.staff.role, "coach"), eq(t.staff.active, true))).orderBy(t.staff.name),
+    db.select({ membershipId: t.ptSessions.membershipId, coachId: t.ptSessions.coachId }).from(t.ptSessions).where(eq(t.ptSessions.memberId, id)).orderBy(t.ptSessions.at),
+  ]);
+  const lastCoach: Record<string, string | null> = {};
+  for (const l of ptLog) if (l.membershipId) lastCoach[l.membershipId] = l.coachId;
   const standing = memberStanding(ms, today);
   const allowed = visits.filter((v) => v.allowed);
+  const quietSince = allowed[0]?.at ?? member.createdAt;
+  const quietDays = Math.floor((now.getTime() - quietSince.getTime()) / 86_400_000);
+  const atRisk = (standing.status === "active" || standing.status === "expiring") && quietDays > AT_RISK_DAYS;
   return {
     member,
     standing,
@@ -122,7 +137,11 @@ export async function getMemberDetail(id: string, now = new Date()) {
       last30: allowed.filter((v) => localDate(v.at) > addDays(today, -30)).length,
       total: allowed.length,
     },
-    activity: log,
+    activity: log.map((x) => ({ ...x.a, staffName: x.staffName })),
+    coaches: coachRows,
+    lastCoach,
+    atRisk,
+    quietDays,
   };
 }
 

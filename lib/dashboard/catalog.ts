@@ -5,7 +5,7 @@
  * a module later is: add it here + a loader/renderer in components/admin/dashboard/.
  */
 
-export type WidgetGroup = "members" | "visits" | "sales";
+export type WidgetGroup = "members" | "visits" | "sales" | "business" | "team";
 /** columns on a wide screen (4-column grid); phones show 1 = half width, 2/4 = full */
 export type WidgetSize = 1 | 2 | 4;
 
@@ -16,7 +16,7 @@ export type WidgetMeta = {
   group: WidgetGroup;
   sizes: readonly WidgetSize[];
   /** where the numbers come from, shown in the editor */
-  source: "Superfit" | "Qashier";
+  source: "Superfit" | "Qashier" | "Superfit + Qashier" | "Website";
 };
 
 export const WIDGETS = [
@@ -47,11 +47,24 @@ export const WIDGETS = [
   { id: "top-visitors", title: "Most consistent", description: "Members with the most visits, last 30 days", group: "visits", sizes: [2], source: "Superfit" },
   { id: "birthdays", title: "Birthdays", description: "Members with a birthday in the next 7 days", group: "members", sizes: [2], source: "Superfit" },
   { id: "recent-sales", title: "Recent sales", description: "Latest receipts from the till", group: "sales", sizes: [2, 4], source: "Qashier" },
+  // business
+  { id: "kpi-profit-month", title: "Profit this month", description: "Sales minus costs, month to date", group: "business", sizes: [1], source: "Superfit + Qashier" },
+  { id: "kpi-costs-month", title: "Costs this month", description: "Expenses including monthly fixed costs", group: "business", sizes: [1], source: "Superfit" },
+  { id: "targets", title: "Monthly targets", description: "Progress towards this month's goals", group: "business", sizes: [2, 4], source: "Superfit + Qashier" },
+  { id: "profit-monthly", title: "Profit by month", description: "Last 12 months, sales minus costs", group: "business", sizes: [2, 4], source: "Superfit + Qashier" },
+  { id: "kpi-renewal-rate", title: "Renewal rate", description: "Plans that ended in the last 90 days and were renewed", group: "members", sizes: [1], source: "Superfit" },
+  { id: "kpi-churn", title: "Churn this month", description: "Members active on the 1st who no longer are", group: "members", sizes: [1], source: "Superfit" },
+  { id: "at-risk", title: "At risk", description: "Active members with no visit in 14+ days", group: "members", sizes: [2], source: "Superfit" },
+  { id: "kpi-open-leads", title: "Open leads", description: "Enquiries not yet joined or lost, with follow-ups due", group: "members", sizes: [1], source: "Superfit" },
+  { id: "follow-ups", title: "Follow-ups due", description: "Leads to call today or overdue", group: "members", sizes: [2], source: "Superfit" },
+  { id: "kpi-cafe-orders", title: "Cafe orders today", description: "Website orders today and waiting at the bar", group: "sales", sizes: [1], source: "Website" },
+  { id: "kpi-pt-month", title: "PT sessions", description: "Sessions delivered this month, requests waiting", group: "team", sizes: [1], source: "Superfit" },
+  { id: "on-shift", title: "Working today", description: "Who's on the rota and who's clocked in", group: "team", sizes: [2], source: "Superfit" },
 ] as const satisfies readonly WidgetMeta[];
 
 export type WidgetId = (typeof WIDGETS)[number]["id"];
 
-export const GROUP_LABEL: Record<WidgetGroup, string> = { members: "Members", visits: "Visits", sales: "Sales" };
+export const GROUP_LABEL: Record<WidgetGroup, string> = { members: "Members", visits: "Visits", sales: "Sales & cafe", business: "Business", team: "Team & coaching" };
 
 export type LayoutItem = { id: WidgetId; size: WidgetSize };
 export type DashboardLayout = { version: 1; items: LayoutItem[] };
@@ -74,32 +87,37 @@ export const PRESETS = {
     layout: L(
       "kpi-active",
       "kpi-in-today",
-      "kpi-expiring",
       "kpi-sales-month",
+      "kpi-profit-month",
+      "targets",
       "visits-daily",
       "busy-hours",
-      "sales-monthly",
+      "profit-monthly",
       "top-sellers",
       "expiring-list",
+      "at-risk",
+      "kpi-renewal-rate",
+      "kpi-churn",
+      "kpi-open-leads",
+      "kpi-pt-month",
       "win-back",
-      "sales-by-type",
       "members-by-plan",
     ),
   },
   desk: {
     label: "Front desk",
     description: "Today, renewals to chase, who's in",
-    layout: L("kpi-in-today", "kpi-expiring", "kpi-active", "kpi-sales-today", "expiring-list", "latest-checkins", "win-back", "birthdays"),
+    layout: L("kpi-in-today", "kpi-expiring", "kpi-cafe-orders", "kpi-open-leads", "expiring-list", "latest-checkins", "follow-ups", "on-shift", "at-risk", "birthdays"),
   },
   sales: {
     label: "Sales & cafe",
     description: "Till numbers and what's selling",
-    layout: L("kpi-sales-today", "kpi-sales-week", "kpi-sales-month", "kpi-avg-sale", ["sales-daily", 4], "top-sellers", "sales-by-type", ["sales-monthly", 4], "recent-sales"),
+    layout: L("kpi-sales-today", "kpi-sales-week", "kpi-sales-month", "kpi-avg-sale", ["sales-daily", 4], "kpi-cafe-orders", "kpi-profit-month", "kpi-costs-month", "kpi-memberships-sold", "top-sellers", "sales-by-type", ["sales-monthly", 4], ["profit-monthly", 4], "recent-sales"),
   },
   growth: {
     label: "Growth",
     description: "Members, retention and habits",
-    layout: L("kpi-active", "kpi-new-members", "kpi-memberships-sold", "kpi-visits-per-member", ["active-trend", 4], "members-by-plan", "top-visitors", "win-back", "expiring-list"),
+    layout: L("kpi-active", "kpi-new-members", "kpi-renewal-rate", "kpi-churn", ["active-trend", 4], "kpi-open-leads", "kpi-memberships-sold", "kpi-visits-per-member", "kpi-pt-month", "at-risk", "follow-ups", "members-by-plan", "top-visitors", "win-back", "expiring-list"),
   },
 } satisfies Record<string, { label: string; description: string; layout: DashboardLayout }>;
 

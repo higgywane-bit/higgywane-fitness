@@ -14,11 +14,12 @@ import { MemberAvatar } from "./member-avatar";
 import { standingLine } from "./member-row";
 import { StatusBadge } from "./status-badge";
 
-type Filter = "all" | MemberStatus | "archived";
+type Filter = "all" | MemberStatus | "archived" | "at-risk";
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "active", label: "Active" },
   { id: "expiring", label: "Expiring" },
+  { id: "at-risk", label: "At risk" },
   { id: "expired", label: "Expired" },
   { id: "frozen", label: "Paused" },
   { id: "upcoming", label: "Starts soon" },
@@ -34,6 +35,7 @@ export function MembersTable({ rows }: { rows: MemberListRow[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const filter = (params.get("status") as Filter) ?? "all";
+  const tag = params.get("tag");
   const [q, setQ] = useState(params.get("q") ?? "");
   const [sort, setSort] = useState<Sort>(filter === "expiring" ? "ending" : "name");
   const [limit, setLimit] = useState(PAGE);
@@ -55,6 +57,7 @@ export function MembersTable({ rows }: { rows: MemberListRow[] }) {
         c.all++;
         // "Active" includes members who are expiring: they can still train.
         if (r.status === "expiring") c.active = (c.active ?? 0) + 1;
+        if (r.atRisk) c["at-risk"] = (c["at-risk"] ?? 0) + 1;
         c[r.status] = (c[r.status] ?? 0) + 1;
       }
     }
@@ -67,7 +70,8 @@ export function MembersTable({ rows }: { rows: MemberListRow[] }) {
     const code = needle.replace(/[^a-z0-9]/g, "");
     return rows
       .filter((r) => (filter === "archived" ? r.archived : !r.archived))
-      .filter((r) => filter === "all" || filter === "archived" || r.status === filter || (filter === "active" && r.status === "expiring"))
+      .filter((r) => filter === "all" || filter === "archived" || r.status === filter || (filter === "active" && r.status === "expiring") || (filter === "at-risk" && r.atRisk))
+      .filter((r) => !tag || r.tags.includes(tag))
       .filter(
         (r) =>
           !needle ||
@@ -91,7 +95,15 @@ export function MembersTable({ rows }: { rows: MemberListRow[] }) {
             return a.name.localeCompare(b.name);
         }
       });
-  }, [rows, filter, q, sort]);
+  }, [rows, filter, q, sort, tag]);
+
+  const allTags = useMemo(() => [...new Set(rows.flatMap((r) => r.tags))].sort(), [rows]);
+  function setTag(t: string | null) {
+    const next = new URLSearchParams(params);
+    if (t) next.set("tag", t);
+    else next.delete("tag");
+    router.replace(`${pathname}?${next}`, { scroll: false });
+  }
 
   return (
     <div>
@@ -145,6 +157,22 @@ export function MembersTable({ rows }: { rows: MemberListRow[] }) {
             </button>
           ))}
         </div>
+        {allTags.length ? (
+          <div className="no-scrollbar -mx-4 flex items-center gap-1.5 overflow-x-auto px-4 md:mx-0 md:px-0" aria-label="Filter by tag">
+            <span className="mr-1 shrink-0 text-xs text-text-tertiary">Tags</span>
+            {allTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={tag === t}
+                onClick={() => setTag(tag === t ? null : t)}
+                className={cn("tap h-8 shrink-0 rounded-full px-3 text-xs font-medium", tag === t ? "bg-white text-black" : "bg-surface-2 text-text-secondary hover:text-white")}
+              >
+                #{t}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {shown.length ? (
@@ -172,7 +200,13 @@ export function MembersTable({ rows }: { rows: MemberListRow[] }) {
                         <span className="tabular shrink-0 text-xs text-text-tertiary">#{m.memberNo}</span>
                       </span>
                       <span className="block truncate text-[13px] text-text-secondary md:hidden">{standingLine(m)}</span>
-                      {m.source === "glofox" ? <span className="hidden text-xs text-text-tertiary md:block">From Glofox</span> : null}
+                      <span className="hidden gap-1.5 text-xs text-text-tertiary md:flex">
+                        {m.atRisk ? <span className="font-semibold text-energy">At risk</span> : null}
+                        {m.tags.map((t) => (
+                          <span key={t}>#{t}</span>
+                        ))}
+                        {m.source === "glofox" ? <span>From Glofox</span> : null}
+                      </span>
                     </span>
                   </span>
                   <span className="hidden min-w-0 items-center gap-2.5 md:flex">

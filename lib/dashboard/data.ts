@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { GYM } from "@/content/gym";
 import { dailySeries, hourHeatmap, inRange, monthToDateRanges, pctChange } from "@/lib/admin/analytics";
 import { listMembers, recentCheckIns } from "@/lib/admin/queries";
@@ -7,6 +7,10 @@ import { getDb, t, type DB } from "@/lib/db";
 import { addDays, addMonths, diffDays, localDate } from "@/lib/membership/dates";
 import { fullName } from "@/lib/membership/service";
 import type { WidgetId } from "./catalog";
+import { expensesInRange } from "@/lib/expenses/rules";
+import { memberFlow, profitAndLoss, renewalRate, revenueByMonth } from "@/lib/performance/metrics";
+import { loadTargets } from "@/lib/performance/targets";
+import { entryHours } from "@/lib/staff/rules";
 
 /*
  * Where every dashboard number comes from. Definitions live here once
@@ -41,6 +45,11 @@ export class DashboardContext {
         .from(t.checkIns)
         .where(and(eq(t.checkIns.allowed, true), gte(t.checkIns.at, new Date(this.now.getTime() - 70 * DAY)))),
     );
+  expenses = () => this.memo("expenses", () => this.db.select().from(t.expenses));
+  plans = () =>
+    this.memo("plans", async () =>
+      (await this.memberships()).map((m) => ({ memberId: m.memberId, kind: m.kind, startsOn: m.startsOn, endsOn: m.endsOn, cancelled: !!m.cancelledAt, planName: m.planName, price: m.price, createdAt: m.createdAt, source: m.source })),
+    );
   sales = () =>
     this.memo("sales", () =>
       this.db
@@ -60,7 +69,7 @@ function sumSales(rows: { at: Date; amount: number }[], from: string, to: string
   return baht(rows.filter((s) => inRange(s.at, from, to)).reduce((a, s) => a + s.amount, 0));
 }
 
-export type KpiData = { value: number; format: "count" | "thb" | "decimal"; change?: number | null; sub?: string; href?: string; tone?: "warn" };
+export type KpiData = { value: number; format: "count" | "thb" | "decimal" | "pct"; change?: number | null; sub?: string; href?: string; tone?: "warn" };
 
 /* ── loaders, one per module ─────────────────────────────── */
 
@@ -257,5 +266,120 @@ export const LOADERS: Record<WidgetId, (c: DashboardContext) => Promise<unknown>
       .orderBy(desc(t.sales.occurredAt))
       .limit(8);
     return { rows: rows.map((r) => ({ ...r, at: r.at.toISOString(), amount: baht(r.amount) })) };
+  },
+
+  /* ── business ── */
+  async "kpi-profit-month"(c) {
+    const mtd = monthToDateRanges(c.today);
+    const [s, e] = await Promise.all([c.sales(), c.expenses()]);
+    const cost = (from: string, to: string) => expensesInRange(e, from, to).reduce((a, x) => a + x.amountSatang, 0) / 100;
+    const now = sumSales(s, mtd.thisStart, mtd.thisEnd) - cost(mtd.thisStart, mtd.thisEnd);
+    const before = sumSales(s, mtd.prevStart, mtd.prevEnd) - cost(mtd.prevStart, mtd.prevEnd);
+    const change = pctChange(now, before);
+    return { value: now, format: "thb", change, tone: now < 0 ? "warn" : undefined, sub: change != null ? "vs last month, same days" : "Sales minus costs", href: "/admin/performance" } satisfies KpiData;
+  },
+  async "kpi-costs-month"(c) {
+    const mtd = monthToDateRanges(c.today);
+    const e = await c.expenses();
+    const cost = (from: string, to: string) => expensesInRange(e, from, to).reduce((a, x) => a + x.amountSatang, 0) / 100;
+    const now = cost(mtd.thisStart, mtd.thisEnd);
+    return { value: now, format: "thb", change: pctChange(now, cost(mtd.prevStart, mtd.prevEnd)), sub: "vs last month, same days", href: "/admin/expenses" } satisfies KpiData;
+  },
+  async targets(c) {
+    const mtd = monthToDateRanges(c.today);
+    const [targets, s, plans] = await Promise.all([loadTargets(c.db), c.sales(), c.plans()]);
+    const flow = memberFlow(plans, { from: mtd.thisStart, to: c.today });
+    const [{ n }] = await c.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(t.ptSessions)
+      .where(and(eq(t.ptSessions.status, "done"), gte(t.ptSessions.at, new Date(`${mtd.thisStart}T00:00:00+07:00`))));
+    const rows = [
+      { label: "Sales", value: sumSales(s, mtd.thisStart, mtd.thisEnd), target: targets.revenue, money: true },
+      { label: "New members", value: flow.joined, target: targets.newMembers, money: false },
+      { label: "Active members", value: flow.activeEnd, target: targets.activeMembers, money: false },
+      { label: "PT sessions", value: n, target: targets.ptSessions, money: false },
+    ].filter((r) => r.target);
+    return { rows };
+  },
+  async "profit-monthly"(c) {
+    const from = `${addMonths(c.today.slice(0, 8) + "01", -11)}`;
+    const [rows, e] = await Promise.all([
+      c.db
+        .select({ at: t.sales.occurredAt, amountSatang: t.sales.amountSatang, category: t.sales.category })
+        .from(t.sales)
+        .where(gte(t.sales.occurredAt, new Date(`${from}T00:00:00+07:00`))),
+      c.expenses(),
+    ]);
+    const pnl = profitAndLoss(revenueByMonth(rows, { from, to: c.today }), expensesInRange(e, from, c.today));
+    return { series: pnl.map((m) => ({ date: `${m.month}-01`, value: Math.max(0, m.profit) })), losses: pnl.filter((m) => m.profit < 0).length, today: c.today, empty: !rows.length };
+  },
+  async "kpi-renewal-rate"(c) {
+    const r = renewalRate(await c.plans(), { from: addDays(c.today, -104), to: addDays(c.today, -14) }, c.today);
+    return { value: r.rate == null ? 0 : Math.round(r.rate * 100), format: "pct", sub: r.ended ? `${r.renewed} of ${r.ended} plans renewed` : "No plans ended yet", href: "/admin/performance?period=last-90" } satisfies KpiData;
+  },
+  async "kpi-churn"(c) {
+    const mtd = monthToDateRanges(c.today);
+    const f = memberFlow(await c.plans(), { from: mtd.thisStart, to: c.today });
+    return { value: f.churned, format: "count", tone: f.churnRate && f.churnRate > 0.08 ? "warn" : undefined, sub: f.churnRate != null ? `${Math.round(f.churnRate * 100)}% of ${f.activeStart} active on the 1st` : undefined, href: "/admin/performance" } satisfies KpiData;
+  },
+  async "at-risk"(c) {
+    const rows = (await c.members()).filter((m) => !m.archived && m.atRisk).sort((a, b) => (a.lastVisit ?? "").localeCompare(b.lastVisit ?? ""));
+    return { rows, today: c.today };
+  },
+  async "kpi-open-leads"(c) {
+    const rows = await c.db.select({ stage: t.leads.stage, next: t.leads.nextFollowUp }).from(t.leads).where(and(ne(t.leads.stage, "won"), ne(t.leads.stage, "lost")));
+    const due = rows.filter((r) => r.next && r.next <= c.today).length;
+    return { value: rows.length, format: "count", tone: due ? "warn" : undefined, sub: due ? `${due} follow-ups due` : "None due today", href: "/admin/leads" } satisfies KpiData;
+  },
+  async "follow-ups"(c) {
+    const rows = await c.db
+      .select({ id: t.leads.id, name: t.leads.name, phone: t.leads.phone, source: t.leads.source, stage: t.leads.stage, next: t.leads.nextFollowUp })
+      .from(t.leads)
+      .where(and(ne(t.leads.stage, "won"), ne(t.leads.stage, "lost"), lte(t.leads.nextFollowUp, c.today)))
+      .orderBy(t.leads.nextFollowUp)
+      .limit(8);
+    return { rows, today: c.today };
+  },
+  async "kpi-cafe-orders"(c) {
+    const start = new Date(`${c.today}T00:00:00+07:00`);
+    const rows = await c.db.select({ status: t.cafeOrders.status, subtotal: t.cafeOrders.subtotal }).from(t.cafeOrders).where(gte(t.cafeOrders.createdAt, start));
+    const live = rows.filter((r) => r.status !== "cancelled");
+    const waiting = rows.filter((r) => r.status === "new" || r.status === "preparing").length;
+    return { value: live.length, format: "count", tone: waiting ? "warn" : undefined, sub: waiting ? `${waiting} waiting at the bar` : `฿${live.reduce((a, r) => a + r.subtotal, 0).toLocaleString("en-US")} today`, href: "/admin/cafe" } satisfies KpiData;
+  },
+  async "kpi-pt-month"(c) {
+    const mtd = monthToDateRanges(c.today);
+    const [[{ n }], [{ waiting }]] = await Promise.all([
+      c.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(t.ptSessions)
+        .where(and(eq(t.ptSessions.status, "done"), gte(t.ptSessions.at, new Date(`${mtd.thisStart}T00:00:00+07:00`)))),
+      c.db.select({ waiting: sql<number>`count(*)::int` }).from(t.ptBookings).where(eq(t.ptBookings.status, "requested")),
+    ]);
+    return { value: n, format: "count", tone: waiting ? "warn" : undefined, sub: waiting ? `${waiting} booking requests waiting` : "Delivered this month", href: "/admin/coaching" } satisfies KpiData;
+  },
+  async "on-shift"(c) {
+    const [people, shifts, entries] = await Promise.all([
+      c.db.select().from(t.staff).where(eq(t.staff.active, true)),
+      c.db.select().from(t.shifts).where(eq(t.shifts.date, c.today)),
+      c.db.select().from(t.timeEntries).where(gte(t.timeEntries.clockIn, new Date(`${c.today}T00:00:00+07:00`))),
+    ]);
+    const rows = people
+      .map((p) => {
+        const mine = entries.filter((e) => e.staffId === p.id);
+        const open = mine.find((e) => !e.clockOut);
+        return {
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          color: p.color,
+          shifts: shifts.filter((s) => s.staffId === p.id).map((s) => `${s.start}–${s.end}`),
+          clockedInAt: open?.clockIn.toISOString() ?? null,
+          hours: Math.round(mine.reduce((a, e) => a + entryHours(e.clockIn, e.clockOut, c.now), 0) * 10) / 10,
+        };
+      })
+      .filter((p) => p.shifts.length || p.hours > 0)
+      .sort((a, b) => Number(!!b.clockedInAt) - Number(!!a.clockedInAt) || (a.shifts[0] ?? "").localeCompare(b.shifts[0] ?? ""));
+    return { rows };
   },
 };

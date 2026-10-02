@@ -31,8 +31,8 @@ export function ProductSheet({ slug, editLineId }: { slug: string; editLineId?: 
 
   const close = () => {
     setOpen(false);
-    // Radix dialog has no animation-end callback; match its exit duration.
-    if (desktop) setTimeout(leave, 170);
+    // Route back once the exit animation has played (Radix ~160 ms, Vaul ~500 ms).
+    setTimeout(leave, desktop ? 170 : 380);
   };
 
   const done = () => {
@@ -60,7 +60,6 @@ export function ProductSheet({ slug, editLineId }: { slug: string; editLineId?: 
     <Drawer
       open={open}
       onOpenChange={(o) => !o && close()}
-      onAnimationEnd={(o) => !o && leave()}
       repositionInputs={false}
     >
       <DrawerContent className="h-[94dvh]" aria-describedby={`desc-${item.id}`}>

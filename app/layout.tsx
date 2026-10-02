@@ -62,7 +62,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <head>
         {adobeKit ? (
-          // eslint-disable-next-line @next/next/no-css-tags
           <link rel="stylesheet" href={`https://use.typekit.net/${adobeKit}.css`} />
         ) : null}
       </head>

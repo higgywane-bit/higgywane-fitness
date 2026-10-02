@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils";
 import { LeahAvatar } from "./leah-avatar";
 import { LeahMessageView } from "./leah-message";
 
+// 40px visual, 44px hit area
+const ICON_BUTTON =
+  "tap relative grid size-10 place-items-center rounded-full text-text-secondary after:absolute after:-inset-0.5 after:content-[''] hover:text-white";
+
 type TitleProps = { className?: string; children: ReactNode };
 
 type Props = {
@@ -35,7 +39,7 @@ function LanguageSwitch({ locale, onChange, label }: { locale: Locale; onChange:
             onClick={() => onChange(l)}
             // 44px hit area around a compact 28px pill
             className={cn(
-              "tap relative h-7 min-w-9 rounded-full px-2 text-xs font-semibold after:absolute after:-inset-x-0.5 after:-inset-y-2 after:content-['']",
+              "tap relative h-7 min-w-8 rounded-full px-1.5 text-xs font-semibold after:absolute after:-inset-x-0.5 after:-inset-y-2 after:content-['']",
               active ? "bg-white text-black" : "text-text-secondary hover:text-white",
             )}
           >
@@ -149,21 +153,23 @@ export function LeahChat({ Title, onClose, onNavigate, autoFocus }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" lang={locale}>
-      <header className="flex shrink-0 items-center gap-3 border-b border-hairline py-3 pr-2 pl-4">
+      <header className="flex shrink-0 items-center gap-2.5 border-b border-hairline py-3 pr-1.5 pl-4">
         <LeahAvatar size={40} online />
         <div className="min-w-0 flex-1">
           <Title className="truncate text-[15px] leading-5 font-semibold text-white">{leah.name}</Title>
           <p className="truncate text-xs leading-4 text-text-tertiary">{t.role}</p>
         </div>
         <LanguageSwitch locale={locale} onChange={(l) => setLocale(l)} label={t.language} />
-        {!empty ? (
-          <button type="button" onClick={reset} aria-label={t.newChat} title={t.newChat} className="tap grid size-11 place-items-center rounded-full text-text-secondary hover:text-white">
-            <SquarePen className="size-[19px]" />
+        <div className="flex items-center">
+          {!empty ? (
+            <button type="button" onClick={reset} aria-label={t.newChat} title={t.newChat} className={ICON_BUTTON}>
+              <SquarePen className="size-[19px]" />
+            </button>
+          ) : null}
+          <button type="button" onClick={onClose} aria-label={t.close} className={ICON_BUTTON}>
+            <X className="size-[22px]" />
           </button>
-        ) : null}
-        <button type="button" onClick={onClose} aria-label={t.close} className={cn("tap grid size-11 place-items-center rounded-full text-text-secondary hover:text-white", empty && "ml-1")}>
-          <X className="size-[22px]" />
-        </button>
+        </div>
       </header>
 
       <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-vaul-no-drag>

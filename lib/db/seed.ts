@@ -27,12 +27,16 @@ type Scenario = { plan: string; endIn: number; freeze?: boolean; pt?: string } |
 
 export async function seedDemo(db: DB, now = new Date()) {
   const r = rng(42);
-  const pick = <T,>(a: readonly T[]) => a[Math.floor(r() * a.length)];
+  const pick = <T,>(a: readonly T[]): T => a[Math.floor(r() * a.length)];
   const today = localDate(now);
 
   // [plan, days until cover ends]: negative = already expired
   const scenarios: Scenario[] = [
-    ...Array.from({ length: 22 }, () => ({ plan: pick(["1-month", "3-months", "6-months", "12-months", "3-months"]), endIn: 8 + Math.floor(r() * 150) })),
+    ...Array.from({ length: 22 }, () => {
+      const plan = pick(["1-month", "3-months", "6-months", "12-months", "3-months"] as const);
+      const length = { "1-month": 30, "3-months": 91, "6-months": 182, "12-months": 365 }[plan];
+      return { plan, endIn: 8 + Math.floor(r() * (length - 9)) };
+    }),
     { plan: "1-month", endIn: 0 },
     { plan: "1-week", endIn: 0 },
     { plan: "1-month", endIn: 1 },

@@ -9,6 +9,7 @@ import {
   evaluateAccess,
   nextStartDate,
   planEndDate,
+  type AccessDecision,
   type DenyReason,
 } from "./access";
 import { generateAccessCode, generatePassToken, normalizeCode } from "./codes";
@@ -27,7 +28,7 @@ export type CheckInResult = {
   allowed: boolean;
   reason?: DenyReason;
   nudge?: "last-day" | "renew-soon" | null;
-  /** same member scanned again within a couple of minutes: not logged twice */
+  /** same member scanned again within a couple of minutes: not logged twice (previousVisit = that scan) */
   duplicate?: boolean;
   at: string;
   code?: string;
@@ -95,9 +96,7 @@ export async function checkIn(
 
   const today = localDate(now);
   const ms = await memberMemberships(db, member.id);
-  const decision = member.archivedAt
-    ? ({ allowed: false, reason: "archived" } as const)
-    : evaluateAccess(ms, today);
+  const decision: AccessDecision = member.archivedAt ? { allowed: false, reason: "archived" } : evaluateAccess(ms, today);
   const standing = decision.standing;
 
   const [prev] = await db
@@ -150,7 +149,7 @@ export async function checkIn(
     frozenUntil: standing?.frozenUntil,
     pt: standing?.pt ? { sessionsLeft: standing.pt.sessionsLeft, endsOn: standing.pt.endsOn } : undefined,
     visitsThisMonth: visits,
-    previousVisit: duplicate ? undefined : prev?.at.toISOString(),
+    previousVisit: prev?.at.toISOString(),
   };
 }
 

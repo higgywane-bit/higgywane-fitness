@@ -1,0 +1,166 @@
+"use client";
+
+import { useState } from "react";
+import { formatTHB } from "@/lib/format";
+import { formatDate } from "@/lib/membership/dates";
+import { cn } from "@/lib/utils";
+
+/** Serializable value formats (server components can't pass functions to client ones). */
+export type ChartUnit = "visits" | "thb" | "count";
+
+function fmt(unit: ChartUnit, n: number) {
+  if (unit === "thb") return formatTHB(n);
+  if (unit === "visits") return `${n} visit${n === 1 ? "" : "s"}`;
+  return String(n);
+}
+
+/*
+ * Small, dependency-free charts. One series each (the panel title names it, so no legend),
+ * thin bars with rounded data ends on a recessive baseline, and a hover/tap readout.
+ */
+
+export function BarChart({
+  data,
+  unit = "count",
+  today,
+  tickEvery = 7,
+  highlightLast = true,
+  className,
+}: {
+  data: { date: string; value: number }[];
+  unit?: ChartUnit;
+  /** gym-local date, so labels drop the year when it's this year */
+  today: string;
+  tickEvery?: number;
+  highlightLast?: boolean;
+  className?: string;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const format = (n: number) => fmt(unit, n);
+  const label = (d: string) => formatDate(d, today);
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const shown = hover ?? data.length - 1;
+  const total = data.reduce((a, d) => a + d.value, 0);
+
+  return (
+    <div className={cn("select-none", className)}>
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <p className="text-sm text-text-secondary">
+          <span className="tabular font-semibold text-white">{format(data[shown]?.value ?? 0)}</span>
+          <span className="ml-1.5">{data[shown] ? label(data[shown].date) : ""}</span>
+        </p>
+        <p className="tabular text-xs text-text-tertiary">{format(total)} total</p>
+      </div>
+      <div
+        role="img"
+        aria-label={`Bar chart, ${data.length} days, total ${format(total)}`}
+        className="relative flex h-36 items-end gap-[2px] border-b border-hairline-strong"
+        onPointerLeave={() => setHover(null)}
+      >
+        {[0.5, 1].map((f) => (
+          <span key={f} aria-hidden className="pointer-events-none absolute inset-x-0 border-t border-dashed border-hairline" style={{ bottom: `${f * 100}%` }} />
+        ))}
+        {data.map((d, i) => {
+          const active = i === shown;
+          return (
+            <button
+              key={d.date}
+              type="button"
+              tabIndex={-1}
+              aria-label={`${label(d.date)}: ${format(d.value)}`}
+              onPointerEnter={() => setHover(i)}
+              onFocus={() => setHover(i)}
+              className="group relative flex h-full flex-1 items-end"
+            >
+              <span
+                className={cn(
+                  "block w-full rounded-t-[4px] transition-[background-color,height] duration-200",
+                  active || (highlightLast && hover === null && i === data.length - 1) ? "bg-red" : "bg-white/25 group-hover:bg-white/45",
+                )}
+                style={{ height: `${Math.max(d.value ? 3 : 0, (d.value / max) * 100)}%` }}
+              />
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex justify-between text-[11px] text-text-tertiary">
+        {data
+          .filter((_, i) => (data.length - 1 - i) % tickEvery === 0)
+          .map((d) => (
+            <span key={d.date}>{label(d.date)}</span>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** Busy hours: one hue, light → dark by visits. */
+export function Heatmap({ grid, open }: { grid: number[][]; open: number }) {
+  const [hover, setHover] = useState<{ d: number; h: number } | null>(null);
+  const max = Math.max(1, ...grid.flat());
+  const hours = grid[0]?.length ?? 0;
+  const peak = grid.flatMap((row, d) => row.map((v, h) => ({ v, d, h }))).sort((a, b) => b.v - a.v)[0];
+  const sel = hover ?? (peak ? { d: peak.d, h: peak.h } : null);
+  const hourLabel = (h: number) => `${String(open + h).padStart(2, "0")}:00`;
+
+  return (
+    <div className="select-none">
+      <p className="mb-3 text-sm text-text-secondary">
+        {sel ? (
+          <>
+            <span className="font-semibold text-white">{DAYS[sel.d]} {hourLabel(sel.h)}</span>
+            <span className="ml-1.5">
+              {grid[sel.d][sel.h]} visits{hover ? "" : " · busiest"}
+            </span>
+          </>
+        ) : null}
+      </p>
+      <div className="grid gap-[3px]" style={{ gridTemplateColumns: `2.25rem repeat(${hours}, minmax(0, 1fr))` }} onPointerLeave={() => setHover(null)}>
+        {grid.map((row, d) => (
+          <div key={d} className="contents">
+            <span className="self-center text-[11px] text-text-tertiary">{DAYS[d]}</span>
+            {row.map((v, h) => (
+              <span
+                key={h}
+                onPointerEnter={() => setHover({ d, h })}
+                title={`${DAYS[d]} ${hourLabel(h)}: ${v} visits`}
+                className={cn("aspect-square rounded-[4px]", sel?.d === d && sel?.h === h && "ring-2 ring-white")}
+                style={{ backgroundColor: v ? `rgb(225 29 72 / ${0.12 + (v / max) * 0.88})` : "rgb(255 255 255 / 0.04)" }}
+              />
+            ))}
+          </div>
+        ))}
+        <span />
+        {Array.from({ length: hours }, (_, h) => (
+          <span key={h} className="text-center text-[10px] text-text-tertiary">
+            {h % 3 === 0 ? open + h : ""}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Ranked horizontal bars with the value written out (identity is in the label, not the colour). */
+export function BarList({ items, unit = "count" }: { items: { label: string; value: number }[]; unit?: ChartUnit }) {
+  const format = (n: number) => fmt(unit, n);
+  const max = Math.max(1, ...items.map((i) => i.value));
+  if (!items.length) return <p className="text-sm text-text-tertiary">Nothing yet.</p>;
+  return (
+    <ul className="space-y-3">
+      {items.map((i) => (
+        <li key={i.label}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+            <span className="truncate text-text-secondary">{i.label}</span>
+            <span className="tabular font-semibold">{format(i.value)}</span>
+          </div>
+          <div className="h-2 rounded-full bg-white/[0.06]">
+            <div className="h-full rounded-full bg-white/70" style={{ width: `${(i.value / max) * 100}%` }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}

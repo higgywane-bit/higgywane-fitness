@@ -23,3 +23,12 @@ export const ALLERGEN_LABEL: Record<string, string> = {
   soy: "Soy",
   gluten: "Gluten",
 };
+
+/** +66812345678 → 081 234 5678 (Thai numbers as people write them); others unchanged. */
+export function formatPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  const m = p.match(/^\+66(\d{8,9})$/);
+  if (!m) return p;
+  const local = `0${m[1]}`;
+  return local.length === 10 ? `${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}` : `${local.slice(0, 2)} ${local.slice(2, 5)} ${local.slice(5)}`;
+}

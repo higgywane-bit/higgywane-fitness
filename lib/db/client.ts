@@ -21,6 +21,10 @@ export async function createDb(opts: { url?: string; dataDir?: string } = {}): P
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
+  if (opts.dataDir && !opts.dataDir.startsWith("memory://")) {
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(opts.dataDir, { recursive: true });
+  }
   const client = new PGlite(opts.dataDir ?? "memory://");
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: MIGRATIONS });

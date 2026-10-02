@@ -14,3 +14,17 @@ export const GYM = {
   /** Opening hours, used for the peak-hours chart. TODO: confirm with owner */
   hours: { open: 6, close: 22 },
 } as const;
+
+/** How a plan was paid. Qashier is the counter terminal. */
+export const PAYMENT_METHODS = [
+  { id: "qashier", label: "Qashier terminal" },
+  { id: "cash", label: "Cash" },
+  { id: "promptpay", label: "PromptPay QR" },
+  { id: "transfer", label: "Bank transfer" },
+  { id: "comp", label: "Complimentary" },
+] as const;
+
+export function paymentLabel(id: string): string {
+  if (id === "glofox") return "Glofox (imported)";
+  return PAYMENT_METHODS.find((p) => p.id === id)?.label ?? id;
+}

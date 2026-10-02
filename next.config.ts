@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite"],
   // SQL migrations are read at runtime by the local/preview database.
   outputFileTracingIncludes: { "/**": ["./drizzle/**/*"] },
+  // Glofox / Qashier CSV exports are posted to server actions.
+  experimental: { serverActions: { bodySizeLimit: "16mb" } },
 };
 
 export default nextConfig;

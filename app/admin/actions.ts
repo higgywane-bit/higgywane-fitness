@@ -10,6 +10,8 @@ import { importSales } from "@/lib/sales/service";
 import { getMailer } from "@/lib/email";
 import { sendReminders } from "@/lib/membership/reminder-service";
 import { saveLayout } from "@/lib/dashboard/layout";
+import { deleteReport, saveReport, updateReport } from "@/lib/reports/service";
+import type { ReportKind } from "@/lib/reports/analyze";
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -146,4 +148,19 @@ export async function sendRemindersAction() {
 
 export async function saveDashboardAction(layout: unknown) {
   return run(async () => saveLayout(await getDb(), layout));
+}
+
+/* ── Insights (uploaded reports) ──────────────────────────── */
+
+export async function uploadReportAction(csv: string, fileName: string) {
+  if (csv.length > 15_000_000) return { ok: false as const, error: "That file is too big (15 MB max). Export a shorter date range." };
+  return run(async () => saveReport(await getDb(), { csv, fileName }));
+}
+
+export async function updateReportAction(id: string, patch: { kind?: ReportKind; name?: string }) {
+  return run(async () => updateReport(await getDb(), id, patch));
+}
+
+export async function deleteReportAction(id: string) {
+  return run(async () => deleteReport(await getDb(), id));
 }

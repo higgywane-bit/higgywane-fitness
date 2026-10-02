@@ -71,7 +71,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         aria-label="Admin"
         className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-black/85 backdrop-blur-xl lg:hidden"
       >
-        <ul className="mx-auto grid h-[4.5rem] max-w-xl grid-cols-5">
+        <ul className="mx-auto grid h-[4.5rem] max-w-xl grid-cols-6">
           {ADMIN_NAV.map(({ href, label, short, icon: Icon }) => {
             const active = isAdminActive(pathname, href);
             return (

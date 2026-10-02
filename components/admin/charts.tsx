@@ -91,12 +91,15 @@ export function BarChart({
           );
         })}
       </div>
-      <div className="mt-2 flex justify-between text-[11px] text-text-tertiary">
-        {data
-          .filter((_, i) => (data.length - 1 - i) % tickEvery === 0)
-          .map((d) => (
-            <span key={d.date}>{label(d.date)}</span>
-          ))}
+      {/* one slot per bar, so each label sits under its own bar */}
+      <div className="mt-2 flex gap-[2px] text-[11px] text-text-tertiary" aria-hidden>
+        {data.map((d, i) => (
+          <span key={d.date} className="relative h-4 flex-1">
+            {(data.length - 1 - i) % tickEvery === 0 ? (
+              <span className={cn("absolute top-0 whitespace-nowrap", i === data.length - 1 ? "right-0" : i === 0 ? "left-0" : "left-1/2 -translate-x-1/2")}>{label(d.date)}</span>
+            ) : null}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -172,5 +175,48 @@ export function BarList({ items, unit = "count" }: { items: { label: string; val
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Vertical bars with text labels (weekdays, hours). Hover/tap shows the value. */
+export function LabeledBars({ items, unit = "count", labelEvery = 1 }: { items: { label: string; value: number }[]; unit?: ChartUnit; labelEvery?: number }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const max = Math.max(1, ...items.map((i) => i.value));
+  const peak = items.reduce((best, it, i) => (it.value > items[best].value ? i : best), 0);
+  const shown = hover ?? peak;
+  return (
+    <div className="select-none">
+      <p className="mb-3 text-sm text-text-secondary">
+        <span className="tabular font-semibold text-white">{fmt(unit, items[shown]?.value ?? 0)}</span>
+        <span className="ml-1.5">
+          {items[shown]?.label}
+          {hover === null ? " · busiest" : ""}
+        </span>
+      </p>
+      <div className="flex h-28 items-end gap-[3px] border-b border-hairline-strong" onPointerLeave={() => setHover(null)}>
+        {items.map((it, i) => (
+          <button
+            key={it.label}
+            type="button"
+            tabIndex={-1}
+            aria-label={`${it.label}: ${fmt(unit, it.value)}`}
+            onPointerEnter={() => setHover(i)}
+            className="group flex h-full flex-1 items-end"
+          >
+            <span
+              className={cn("block w-full rounded-t-[4px]", i === shown ? "bg-red" : "bg-white/25 group-hover:bg-white/45")}
+              style={{ height: `${Math.max(it.value ? 3 : 0, (it.value / max) * 100)}%` }}
+            />
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-[3px] text-[10px] text-text-tertiary">
+        {items.map((it, i) => (
+          <span key={it.label} className="flex-1 text-center">
+            {i % labelEvery === 0 ? it.label : ""}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

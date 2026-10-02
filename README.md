@@ -16,10 +16,17 @@ Optional env:
 
 - `NEXT_PUBLIC_ADOBE_FONTS_KIT`: Adobe Fonts kit ID. When set, display/body switch to Avenir Next LT Pro; otherwise Barlow Condensed + Inter.
 
+## Admin (members, check-in, sales)
+
+`/admin` is the Superfit membership system that replaces Glofox: front-desk check-in (USB scanner, iPad camera, typed code), members, plans, Glofox import, Qashier sales and renewal reminders. Members get a QR pass at `/pass/<secret>`. Also a modular dashboard (modules on/off, presets) and Insights for uploaded Glofox reports. Design and rollout: `docs/MEMBERSHIP.md`; full blueprint, metric definitions and Lovable handoff: `docs/ADMIN-PLAN.md`.
+
+Locally it runs on PGlite (Postgres in `.data/`, demo members preloaded). For production set `DATABASE_URL` and run `npm run db:migrate`. After changing `lib/db/schema.ts`, run `npm run db:generate`. See `.env.example` for all settings.
+
 ## Where things live
 
 - `content/`: prices (`pricing.json`), ingredients + macros, option groups, menu recipes. Edit data here, not in components.
 - `lib/nutrition.ts`: pure price/macro maths. `lib/payments/`: provider interface, mock provider, PromptPay QR payload.
+- `lib/membership/`: access rules (days left, renewals, pauses), check-in and plan services, Glofox import, reminders. `lib/db/`: schema, client, demo seed. `content/plans.ts`, `content/gym.ts`: plan lengths and desk rules.
 - `public/brand/`: recreated SVG logo (white/black, wordmark + star).
 
 ## Placeholders to confirm

@@ -217,6 +217,7 @@ tests/e2e/                  # Playwright
 | 2 | **Coaches** | Rotator, shared-element transition, profile template, 4 coach entries (placeholder bios until supplied) |
 | 3 | **Train + Home** | Membership and PT pricing with computed savings, home page assembled |
 | 4 | **Polish & ship** | Motion pass, empty/loading states, a11y + Lighthouse, Playwright flows at 4 breakpoints, Vercel deploy |
+| 6 | **Admin & memberships** | Members database, front-desk check-in, Glofox import, Qashier sales, renewal reminders. See `docs/MEMBERSHIP.md` |
 | 5 | **Real ordering** | Connect PromptPay / Apple Pay / Qashier, order notifications to staff, Thai translation |
 
 ---

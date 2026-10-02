@@ -244,3 +244,10 @@
 @keyframes dialog-out {
   to { opacity: 0; transform: translate(-50%, -49%) scale(0.98); }
 }
+@keyframes desk-reset {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+@keyframes sheet-in {
+  from { transform: translateX(100%); }
+}

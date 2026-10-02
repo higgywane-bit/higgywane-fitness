@@ -1,0 +1,60 @@
+Transaction ID,Date,Client Name,Email,Description,Payment Method,Amount,Status
+T1,01/08/2025 16:03,Fah M,fah@mail.com,10 PT Sessions,Card,"15,000.00",Paid
+T2,01/08/2025 11:37,Tom B,tom@mail.com,Day Pass,Card,"250.00",Paid
+T3,01/08/2025 06:05,James W,james@mail.com,1 Week,Cash,"1,200.00",Paid
+T4,02/08/2025 14:27,Tom B,tom@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T5,02/08/2025 09:40,Tom B,tom@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T6,02/08/2025 15:37,Nicha S,nicha@mail.com,Day Pass,Cash,"250.00",Paid
+T7,02/08/2025 06:35,James W,james@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T8,03/08/2025 07:36,Sophie D,sophie@mail.com,3 Months Membership,Cash,"5,400.00",Paid
+T9,03/08/2025 07:37,Ploy W,ploy@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T10,03/08/2025 07:35,Beam L,beam@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T11,04/08/2025 09:31,Liam P,liam@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T12,05/08/2025 13:37,Beam L,beam@mail.com,Day Pass,Cash,"250.00",Paid
+T13,05/08/2025 18:11,James W,james@mail.com,3 Months Membership,Bank Transfer,"5,400.00",Paid
+T14,05/08/2025 15:19,Tom B,tom@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T15,05/08/2025 17:28,Beam L,beam@mail.com,Day Pass,Cash,"250.00",Paid
+T16,05/08/2025 07:32,Tom B,tom@mail.com,Day Pass,Cash,"250.00",Paid
+T17,06/08/2025 20:31,Ploy W,ploy@mail.com,Day Pass,Cash,"250.00",Paid
+T18,06/08/2025 18:35,Tom B,tom@mail.com,1 Month Membership,Bank Transfer,"2,200.00",Paid
+T19,07/08/2025 15:31,Beam L,beam@mail.com,3 Months Membership,Bank Transfer,"5,400.00",Paid
+T20,07/08/2025 19:05,Tom B,tom@mail.com,Day Pass,Cash,"250.00",Paid
+T21,07/08/2025 06:46,Tom B,tom@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T22,08/08/2025 10:45,Gun T,gun@mail.com,Day Pass,Cash,"250.00",Paid
+T23,08/08/2025 06:29,Beam L,beam@mail.com,1 Week,Cash,"1,200.00",Paid
+T24,08/08/2025 13:03,Tom B,tom@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T25,09/08/2025 12:25,James W,james@mail.com,1 Month Membership,Cash,"2,200.00",Paid
+T26,09/08/2025 12:35,Gun T,gun@mail.com,1 Month Membership,Cash,"2,200.00",Paid
+T27,09/08/2025 19:35,Fah M,fah@mail.com,1 Week,Cash,"1,200.00",Paid
+T28,10/08/2025 09:09,Fah M,fah@mail.com,12 Months Membership,Card,"12,000.00",Paid
+T29,10/08/2025 16:14,James W,james@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T30,10/08/2025 08:16,Liam P,liam@mail.com,Day Pass,Cash,"250.00",Paid
+T31,10/08/2025 14:23,Fah M,fah@mail.com,1 Month Membership,Bank Transfer,"2,200.00",Paid
+T32,11/08/2025 17:54,Ploy W,ploy@mail.com,3 Months Membership,Bank Transfer,"5,400.00",Paid
+T33,11/08/2025 13:57,Nicha S,nicha@mail.com,10 PT Sessions,Bank Transfer,"15,000.00",Paid
+T34,11/08/2025 12:25,Fah M,fah@mail.com,Day Pass,Cash,"250.00",Paid
+T35,11/08/2025 06:12,Fah M,fah@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T36,11/08/2025 08:07,Gun T,gun@mail.com,12 Months Membership,Cash,"12,000.00",Paid
+T37,12/08/2025 15:09,Nicha S,nicha@mail.com,1 Month Membership,Bank Transfer,"2,200.00",Paid
+T38,12/08/2025 15:01,Beam L,beam@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T39,12/08/2025 12:09,Liam P,liam@mail.com,1 Week,Bank Transfer,"1,200.00",Paid
+T40,12/08/2025 15:23,Beam L,beam@mail.com,1 Month Membership,Cash,"2,200.00",Paid
+T41,12/08/2025 13:30,Gun T,gun@mail.com,1 Month Membership,Cash,"2,200.00",Paid
+T42,13/08/2025 17:21,Tom B,tom@mail.com,1 Month Membership,Bank Transfer,"2,200.00",Paid
+T43,13/08/2025 14:01,Ploy W,ploy@mail.com,1 Month Membership,Card,"2,200.00",Paid
+T44,13/08/2025 11:09,Sophie D,sophie@mail.com,10 PT Sessions,Bank Transfer,"15,000.00",Paid
+T45,14/08/2025 10:41,Sophie D,sophie@mail.com,1 Week,Card,"1,200.00",Paid
+T46,14/08/2025 14:23,Mint K,mint@mail.com,Day Pass,Card,"250.00",Paid
+T47,14/08/2025 14:34,James W,james@mail.com,3 Months Membership,Bank Transfer,"5,400.00",Paid
+T48,14/08/2025 15:51,James W,james@mail.com,3 Months Membership,Card,"5,400.00",Paid
+T49,14/08/2025 17:51,Fah M,fah@mail.com,Day Pass,Card,"250.00",Paid
+T50,15/08/2025 17:01,Beam L,beam@mail.com,Day Pass,Card,"250.00",Paid
+T51,15/08/2025 10:12,Gun T,gun@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T52,16/08/2025 18:59,Gun T,gun@mail.com,10 PT Sessions,Bank Transfer,"15,000.00",Paid
+T53,16/08/2025 07:14,Beam L,beam@mail.com,12 Months Membership,Card,"12,000.00",Paid
+T54,16/08/2025 11:13,James W,james@mail.com,1 Month Membership,Cash,"2,200.00",Paid
+T55,16/08/2025 19:00,Liam P,liam@mail.com,Day Pass,Cash,"250.00",Paid
+T56,16/08/2025 18:41,Beam L,beam@mail.com,1 Week,Card,"1,200.00",Paid
+T57,17/08/2025 13:56,James W,james@mail.com,1 Week,Card,"1,200.00",Paid
+T58,18/08/2025 07:51,Beam L,beam@mail.com,Day Pass,Bank Transfer,"250.00",Paid
+T59,18/08/2025 17:05,Fah M,fah@mail.com,3 Months Membership,Bank Transfer,"5,400.00",Paid

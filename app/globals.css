@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Superfit brand tokens.
+ * Black first, white type, one accent: Superfit red.
+ * Display face flows through --font-display so swapping to the Adobe Fonts
+ * kit (Avenir Next LT Pro Heavy Condensed) is a one-line change in app/layout.tsx.
+ */
+:root {
+  --radius: 1.25rem;
+
+  /* surfaces */
+  --background: #000000;
+  --surface-1: #0d0d0d;
+  --surface-2: #141414;
+  --surface-3: #1c1c1c;
+  --surface-4: #262626;
+  --hairline: rgb(255 255 255 / 0.08);
+  --hairline-strong: rgb(255 255 255 / 0.14);
+
+  /* type */
+  --foreground: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #8c8c8c;
+
+  /* the one accent */
+  --red: #e11d48;
+  --red-hover: #f0264f;
+  --red-press: #c8163e;
+  --red-text: #ff4d6a; /* red used as text on dark surfaces (AA on #141414) */
+  --red-tint: rgb(225 29 72 / 0.14);
+
+  /* macro roles (always paired with a text label) */
+  --macro-protein: var(--red);
+  --macro-carbs: #f2f2f2;
+  --macro-fat: #6e6e6e;
+  --success: #34c759;
+
+  /* shadcn semantic aliases */
+  --card: var(--surface-2);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-3);
+  --popover-foreground: var(--foreground);
+  --primary: var(--red);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-3);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-3);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--red);
+  --border: var(--hairline);
+  --input: var(--hairline-strong);
+  --ring: #ffffff;
+
+  /* layout */
+  --tabbar-h: 4.5rem;
+  --header-h: 3.5rem;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), "Arial Narrow", sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-red: var(--red);
+  --color-red-hover: var(--red-hover);
+  --color-red-press: var(--red-press);
+  --color-red-text: var(--red-text);
+  --color-red-tint: var(--red-tint);
+  --color-protein: var(--macro-protein);
+  --color-carbs: var(--macro-carbs);
+  --color-fat: var(--macro-fat);
+  --color-success: var(--success);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 0.75rem);
+  --radius-md: calc(var(--radius) - 0.5rem);
+  --radius-lg: calc(var(--radius) - 0.25rem);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 0.25rem);
+  --radius-3xl: calc(var(--radius) + 0.75rem);
+
+  --ease-out-expo: var(--ease-out);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  button,
+  a,
+  [role="button"],
+  input,
+  label {
+    touch-action: manipulation;
+  }
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--red);
+    color: #fff;
+  }
+}
+
+@layer utilities {
+  /* Big, heavy, condensed. The poster voice. */
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.005em;
+    line-height: 0.92;
+  }
+  .text-statement {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+    padding-right: 0.06em; /* italic overhang */
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .tap {
+    transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out),
+      opacity 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+  .tap:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

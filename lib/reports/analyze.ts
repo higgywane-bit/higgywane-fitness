@@ -215,10 +215,10 @@ export function analyze(headers: string[], rows: string[][], opts: AnalysisOptio
   const bestMonth = [...monthly].sort((a, b) => b.value - a.value)[0];
   const personCol = choose(cols, (c) => c.type !== "empty" && c.type !== "date" && c.type !== "money", [/memberid|clientid|userid|email/, /^name$|fullname|clientname|membername/]);
   const people = personCol === null ? null : new Set(rows.map((r) => (r[personCol] ?? "").trim().toLowerCase()).filter(Boolean)).size;
-  const label = (n: number) => (valueIsMoney ? "thb" : "count") as Kpi["format"];
+  const totalFormat: Kpi["format"] = valueIsMoney ? "thb" : "count";
 
   if (kind === "transactions") {
-    kpis.push({ label: valueIsMoney ? "Revenue" : "Total", value: total, format: label(total) });
+    kpis.push({ label: valueIsMoney ? "Revenue" : "Total", value: total, format: totalFormat });
     kpis.push({ label: "Transactions", value: rows.length, format: "count" });
     kpis.push({ label: "Average", value: rows.length ? total / rows.length : 0, format: valueIsMoney ? "thb" : "decimal" });
   } else if (kind === "attendance") {
@@ -232,7 +232,7 @@ export function analyze(headers: string[], rows: string[][], opts: AnalysisOptio
     if (groups[0]) kpis.push({ label: `Top ${cols[groupCol!].header.toLowerCase()}`, value: groups[0].label, format: "text" });
   } else {
     kpis.push({ label: "Rows", value: rows.length, format: "count" });
-    if (valueCol !== null) kpis.push({ label: `Total ${headers[valueCol]}`, value: total, format: label(total) });
+    if (valueCol !== null) kpis.push({ label: `Total ${headers[valueCol]}`, value: total, format: totalFormat });
   }
   if (bestMonth && monthly.length > 1) {
     kpis.push({ label: "Best month", value: new Date(`${bestMonth.date}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }), format: "text" });

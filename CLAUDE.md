@@ -6,6 +6,7 @@ Goal: the cleanest, most premium, most interactive gym site possible — app-lik
 ## Read first
 - `docs/PLAN.md` — the full spec: stack, design direction, routes, feature specs, data models, build sessions. Follow it.
 - `content/pricing.json` — real prices (memberships, PT, cafe) supplied by the owner. Source of truth; never hard-code prices in components.
+- `docs/ADMIN-PLAN.md` — admin blueprint: modules, dashboard module catalogue, metric definitions, data model, integration contracts, Lovable handoff, roadmap.
 - `docs/MEMBERSHIP.md` — the membership system / admin (`/admin`) that replaces Glofox: check-in, members, Glofox import, Qashier sales, reminders.
 - `brand/reference/` — logo, the "SUPERCOACH TEAM" poster (coaches Bella, Nicha, Aun, Poom), and the owner's favourite font (Avenir Next LT Pro Heavy Condensed).
 
@@ -13,7 +14,7 @@ Goal: the cleanest, most premium, most interactive gym site possible — app-lik
 1. **Cafe ordering** is the centrepiece: slick grid → product bottom sheet → add-ons/removals with live price **and macros** → cart with full macro breakdown → checkout with payment method choice (mock provider for now; PromptPay QR, Apple Pay, Qashier terminal later).
 2. **Coaches**: rotating full-bleed portraits → shared-element transition into rich profile pages.
 3. **Train**: memberships + PT pricing with savings computed from data.
-4. **Admin** (`/admin`): members database + front-desk check-in. Membership rules stay in the pure functions in `lib/membership/access.ts`; never re-derive days left or status in components.
+4. **Admin** (`/admin`): members database + front-desk check-in. Membership rules stay in the pure functions in `lib/membership/access.ts`; never re-derive days left or status in components. Dashboard figures are defined once in `lib/dashboard/data.ts` (definitions in `docs/ADMIN-PLAN.md` §4); new dashboard modules go in `lib/dashboard/catalog.ts` + `LOADERS` + `RENDERERS`.
 
 ## Conventions
 - Next.js App Router + TypeScript (strict) + Tailwind v4 + shadcn/ui + Motion + Embla + Vaul + Zustand.

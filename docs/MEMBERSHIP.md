@@ -12,6 +12,8 @@ It does what Superfit actually used Glofox for, and nothing it didn't:
 | Member list and reports | Dashboard: active, expiring, lapsed, visits, busy hours, Qashier sales |
 | Monthly fee | Hosting costs only (Vercel + Supabase, free/low tier at this size) |
 
+The rest of the back office (modular dashboard, Insights for Glofox reports, metric definitions, Lovable handoff, roadmap) is in `docs/ADMIN-PLAN.md`.
+
 Left out on purpose: class timetables, online booking, automated billing, marketing suites. Add later only if needed.
 
 ---

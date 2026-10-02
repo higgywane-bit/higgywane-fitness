@@ -18,7 +18,7 @@ Optional env:
 
 ## Admin (members, check-in, sales)
 
-`/admin` is the Superfit membership system that replaces Glofox: front-desk check-in (USB scanner, iPad camera, typed code), members, plans, Glofox import, Qashier sales and renewal reminders. Members get a QR pass at `/pass/<secret>`. Design and rollout plan: `docs/MEMBERSHIP.md`.
+`/admin` is the Superfit membership system that replaces Glofox: front-desk check-in (USB scanner, iPad camera, typed code), members, plans, Glofox import, Qashier sales and renewal reminders. Members get a QR pass at `/pass/<secret>`. Also a modular dashboard (modules on/off, presets) and Insights for uploaded Glofox reports. Design and rollout: `docs/MEMBERSHIP.md`; full blueprint, metric definitions and Lovable handoff: `docs/ADMIN-PLAN.md`.
 
 Locally it runs on PGlite (Postgres in `.data/`, demo members preloaded). For production set `DATABASE_URL` and run `npm run db:migrate`. After changing `lib/db/schema.ts`, run `npm run db:generate`. See `.env.example` for all settings.
 

@@ -248,3 +248,6 @@
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
 }
+@keyframes sheet-in {
+  from { transform: translateX(100%); }
+}

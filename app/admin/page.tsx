@@ -1,33 +1,82 @@
 import Link from "next/link";
 import { ScanLine, UserPlus } from "lucide-react";
-import { BarChart, BarList, Heatmap } from "@/components/admin/charts";
-import { CheckInFeed } from "@/components/admin/check-in-feed";
-import { MemberRow } from "@/components/admin/member-row";
+import { DashboardCustomizer } from "@/components/admin/dashboard/customizer";
+import { RENDERERS } from "@/components/admin/dashboard/widgets";
 import { PageHeader, Panel } from "@/components/admin/page-header";
-import { StatTile } from "@/components/admin/stat-tile";
 import { Button } from "@/components/ui/button";
 import { GYM } from "@/content/gym";
-import { dashboardData } from "@/lib/admin/queries";
-import { formatPhone, formatTHB } from "@/lib/format";
-import { daysLeftLabel, expiredLabel } from "@/lib/membership/access";
+import { getDb } from "@/lib/db";
+import { widgetMeta, type LayoutItem } from "@/lib/dashboard/catalog";
+import { DashboardContext, LOADERS } from "@/lib/dashboard/data";
+import { loadLayout } from "@/lib/dashboard/layout";
 import { formatDate } from "@/lib/membership/dates";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: { absolute: "Dashboard | Superfit Admin" } };
-
-const CATEGORY: Record<string, string> = { membership: "Memberships", pt: "Personal training", cafe: "Cafe", retail: "Retail", other: "Other" };
 
 function greeting(now = new Date()) {
   const h = (now.getUTCHours() + GYM.utcOffsetHours) % 24;
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
+const LINKS: Partial<Record<string, { href: string; label: string }>> = {
+  "expiring-list": { href: "/admin/members?status=expiring", label: "See all" },
+  "win-back": { href: "/admin/members?status=expired", label: "See all" },
+  "latest-checkins": { href: "/admin/check-in", label: "Front desk" },
+  "recent-sales": { href: "/admin/sales", label: "All sales" },
+  "sales-daily": { href: "/admin/sales", label: "Sales" },
+};
+
+const SPAN: Record<number, string> = { 1: "col-span-1", 2: "col-span-2", 4: "col-span-2 xl:col-span-4" };
+
+async function Widget({ item, ctx }: { item: LayoutItem; ctx: DashboardContext }) {
+  const meta = widgetMeta(item.id)!;
+  const Render = RENDERERS[item.id] as React.ComponentType<{ data: unknown }>;
+  let data: unknown;
+  try {
+    data = await LOADERS[item.id](ctx);
+  } catch (err) {
+    console.error(`dashboard module ${item.id}`, err);
+    return (
+      <Panel title={meta.title} className={SPAN[item.size]}>
+        <p className="text-sm text-text-tertiary">Couldn&apos;t load this module.</p>
+      </Panel>
+    );
+  }
+  if (meta.sizes[0] === 1) {
+    return (
+      <div className={SPAN[item.size]}>
+        <Render data={data} />
+      </div>
+    );
+  }
+  const link = LINKS[item.id];
+  return (
+    <Panel
+      title={meta.title}
+      className={cn(SPAN[item.size], "min-w-0")}
+      action={
+        link ? (
+          <Link href={link.href} className="text-sm text-text-secondary hover:text-white">
+            {link.label}
+          </Link>
+        ) : undefined
+      }
+    >
+      <Render data={data} />
+    </Panel>
+  );
+}
+
 export default async function DashboardPage() {
-  const d = await dashboardData();
+  const db = await getDb();
+  const ctx = new DashboardContext(db, new Date());
+  const layout = await loadLayout(db);
 
   return (
     <div className="pb-12">
-      <PageHeader eyebrow={`${greeting()} · ${formatDate(d.today)}`} title="Dashboard">
+      <PageHeader eyebrow={`${greeting()} · ${formatDate(ctx.today)}`} title="Dashboard">
+        <DashboardCustomizer layout={layout} />
         <Button asChild variant="outline">
           <Link href="/admin/members/new">
             <UserPlus className="size-4" aria-hidden />
@@ -42,132 +91,18 @@ export default async function DashboardPage() {
         </Button>
       </PageHeader>
 
-      <div className="space-y-3 px-4 md:space-y-4 md:px-8">
-        <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-          <StatTile
-            label="Active members"
-            value={d.kpi.active}
-            sub={`+${d.kpi.newThisMonth} new this month`}
-            href="/admin/members?status=active"
-          />
-          <StatTile label="In today" value={d.kpi.inToday} change={d.kpi.inTodayChange} sub={d.kpi.inTodayChange != null ? "vs last week" : "Members checked in"} href="/admin/check-in" />
-          <StatTile
-            label={`Expiring ≤ ${GYM.expiringSoonDays} days`}
-            value={d.kpi.expiring}
-            tone={d.kpi.expiring ? "warn" : undefined}
-            sub={d.kpi.frozen ? `${d.kpi.frozen} paused` : "Renewals to chase"}
-            href="/admin/members?status=expiring"
-          />
-          <StatTile
-            label="Sales this month"
-            value={d.kpi.hasSales ? formatTHB(d.kpi.revenueMonth) : "—"}
-            change={d.kpi.revenueChange}
-            sub={d.kpi.hasSales ? "vs last month" : "Import Qashier sales"}
-            href="/admin/sales"
-          />
+      {layout.items.length ? (
+        <div className="grid grid-cols-2 gap-3 px-4 md:gap-4 md:px-8 xl:grid-cols-4">
+          {layout.items.map((item) => (
+            <Widget key={item.id} item={item} ctx={ctx} />
+          ))}
         </div>
-
-        <div className="grid gap-3 md:gap-4 xl:grid-cols-3">
-          <Panel title="Visits · last 30 days" className="xl:col-span-2">
-            <BarChart data={d.visitsDaily} today={d.today} unit="visits" />
-          </Panel>
-          <Panel title="Busiest hours · last 8 weeks">
-            <Heatmap grid={d.heatmap} open={GYM.hours.open} />
-          </Panel>
+      ) : (
+        <div className="mx-4 rounded-3xl border border-dashed border-hairline-strong p-10 text-center md:mx-8">
+          <p className="font-semibold">Your dashboard is empty.</p>
+          <p className="mt-1 text-sm text-text-secondary">Use Customise to add modules or pick a preset.</p>
         </div>
-
-        <div className="grid gap-3 md:gap-4 xl:grid-cols-3">
-          <Panel
-            title={
-              <span className="flex items-center gap-2">
-                Expiring soon
-                <span className="tabular rounded-full bg-surface-3 px-2 py-0.5 text-xs text-text-secondary">{d.expiring.length}</span>
-              </span>
-            }
-            action={
-              <Link href="/admin/members?status=expiring" className="text-sm text-text-secondary hover:text-white">
-                See all
-              </Link>
-            }
-          >
-            {d.expiring.length ? (
-              <ul className="-mx-2">
-                {d.expiring.slice(0, 7).map((m) => (
-                  <li key={m.id}>
-                    <MemberRow
-                      m={m}
-                      sub={`${m.plan} · ends ${formatDate(m.coverEnds!, d.today)}`}
-                      right={
-                        <span className={cn("tabular shrink-0 text-xs font-semibold", (m.daysLeft ?? 0) <= 1 ? "text-red-text" : "text-energy")}>
-                          {daysLeftLabel(m.daysLeft ?? 0)}
-                        </span>
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-text-tertiary">Nobody runs out in the next {GYM.expiringSoonDays} days.</p>
-            )}
-          </Panel>
-
-          <Panel
-            title={
-              <span className="flex items-center gap-2">
-                Win back
-                <span className="tabular rounded-full bg-surface-3 px-2 py-0.5 text-xs text-text-secondary">{d.lapsed.length}</span>
-              </span>
-            }
-            action={<span className="text-xs text-text-tertiary">Expired in the last 30 days</span>}
-          >
-            {d.lapsed.length ? (
-              <ul className="-mx-2">
-                {d.lapsed.slice(0, 7).map((m) => (
-                  <li key={m.id}>
-                    <MemberRow
-                      m={m}
-                      sub={m.phone ? formatPhone(m.phone) : (m.email ?? m.plan)}
-                      right={<span className="shrink-0 text-xs text-text-tertiary">{expiredLabel(m.daysSinceExpiry ?? 0)}</span>}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-text-tertiary">No recent lapses.</p>
-            )}
-          </Panel>
-
-          <Panel
-            title="Latest check-ins"
-            action={
-              <Link href="/admin/check-in" className="text-sm text-text-secondary hover:text-white">
-                Front desk
-              </Link>
-            }
-          >
-            <CheckInFeed items={d.feed} />
-          </Panel>
-        </div>
-
-        <div className="grid gap-3 md:gap-4 xl:grid-cols-3">
-          <Panel title="Sales · last 30 days" className="xl:col-span-2">
-            {d.kpi.hasSales ? (
-              <BarChart data={d.revenueDaily} today={d.today} unit="thb" />
-            ) : (
-              <p className="text-sm text-text-tertiary">
-                No sales yet. <Link href="/admin/sales" className="text-white underline underline-offset-4">Import a Qashier export</Link>.
-              </p>
-            )}
-          </Panel>
-          <Panel title="This month by type">
-            <BarList items={d.byCategory.filter((c) => c.value > 0).map((c) => ({ label: CATEGORY[c.category], value: c.value }))} unit="thb" />
-            <div className="mt-6 border-t border-hairline pt-4">
-              <h3 className="mb-3 text-[13px] font-medium text-text-secondary">Active members by plan</h3>
-              <BarList items={d.mix.map((m) => ({ label: m.plan, value: m.n }))} />
-            </div>
-          </Panel>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

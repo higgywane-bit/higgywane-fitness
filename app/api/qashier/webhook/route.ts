@@ -37,6 +37,9 @@ function toSale(x: Incoming): SaleInput | null {
     category: categorize(names),
     description: names.slice(0, 200) || null,
     paymentMethod: x.paymentMethod ?? null,
+    items: x.items?.length
+      ? x.items.map((i) => ({ name: i.name, qty: Math.max(1, Math.round(i.qty ?? 1)), amountSatang: Math.round((i.amount ?? 0) * 100) }))
+      : undefined,
   };
 }
 

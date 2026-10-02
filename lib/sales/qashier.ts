@@ -10,6 +10,8 @@ import { autoMap, parseCSV, parseLooseDate } from "@/lib/csv";
 
 export type SaleCategory = "membership" | "pt" | "cafe" | "retail" | "other";
 
+export type SaleItem = { name: string; qty: number; amountSatang: number };
+
 export type SaleInput = {
   externalId: string;
   occurredAt: Date;
@@ -17,6 +19,8 @@ export type SaleInput = {
   category: SaleCategory;
   description: string | null;
   paymentMethod: string | null;
+  /** line items, when the source has them (powers "top sellers") */
+  items?: SaleItem[];
 };
 
 const FIELDS = {
@@ -24,6 +28,7 @@ const FIELDS = {
   date: ["datetime", "transactiondate", "date", "createdat", "time", "transactiontime"],
   time: ["time", "transactiontime"],
   amount: ["nettotal", "grandtotal", "totalamount", "total", "amount", "netsales", "sales"],
+  qty: ["qty", "quantity", "itemqty", "units"],
   item: ["itemname", "item", "product", "productname", "description", "items"],
   category: ["category", "itemcategory", "productcategory", "department"],
   payment: ["paymentmethod", "paymenttype", "payment", "tender", "tendertype"],
@@ -74,7 +79,7 @@ export function parseQashierCSV(csv: string): SalesParse {
   if (map.date === undefined || map.amount === undefined) {
     return { sales: [], skipped: [{ row: 1, reason: "Needs at least a date and a total column" }], headers };
   }
-  const byReceipt = new Map<string, SaleInput & { items: string[] }>();
+  const byReceipt = new Map<string, SaleInput & { items: SaleItem[] }>();
   body.forEach((cells, i) => {
     const get = (k: keyof typeof FIELDS) => (map[k] === undefined ? "" : (cells[map[k]!] ?? "").trim());
     const row = i + 2;
@@ -85,10 +90,12 @@ export function parseQashierCSV(csv: string): SalesParse {
     if (amount === null) return skipped.push({ row, reason: "Unreadable amount" });
     const id = get("receipt") || `${occurredAt.toISOString()}-${amount}`;
     const prev = byReceipt.get(id);
-    const item = get("item");
+    const name = get("item");
+    const qty = Math.max(1, Math.round(Number(get("qty")) || 1));
+    const line = name ? { name, qty, amountSatang: amount } : null;
     if (prev) {
       prev.amountSatang += amount;
-      if (item) prev.items.push(item);
+      if (line) prev.items.push(line);
       return;
     }
     byReceipt.set(id, {
@@ -98,14 +105,18 @@ export function parseQashierCSV(csv: string): SalesParse {
       category: "other",
       description: null,
       paymentMethod: get("payment") || null,
-      items: item ? [item] : [],
+      items: line ? [line] : [],
       ...(get("category") ? { description: get("category") } : {}),
     });
   });
-  const sales = [...byReceipt.values()].map(({ items, ...s }) => ({
-    ...s,
-    category: categorize(items.join(" "), s.description),
-    description: items.length ? items.join(", ").slice(0, 200) : s.description,
-  }));
+  const sales = [...byReceipt.values()].map((s) => {
+    const names = s.items.map((i) => (i.qty > 1 ? `${i.name} ×${i.qty}` : i.name));
+    return {
+      ...s,
+      category: categorize(s.items.map((i) => i.name).join(" "), s.description),
+      description: names.length ? names.join(", ").slice(0, 200) : s.description,
+      items: s.items.length ? s.items : undefined,
+    };
+  });
   return { sales, skipped, headers };
 }

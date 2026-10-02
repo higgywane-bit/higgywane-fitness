@@ -180,9 +180,43 @@ export const reminders = pgTable(
   (t) => [uniqueIndex("reminders_once_idx").on(t.memberId, t.endsOn, t.kind)],
 );
 
+/** Small key/value store for admin preferences shared by every device (e.g. dashboard layout). */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Reports uploaded for the Insights area (Glofox exports today, anything CSV later).
+ * Rows are kept as uploaded so they can be re-analysed any way, any time.
+ */
+export const reportUploads = pgTable(
+  "report_uploads",
+  {
+    id: id(),
+    /** glofox | qashier | other */
+    source: text("source").notNull().default("glofox"),
+    /** transactions | attendance | members | memberships | generic (detected, can be changed) */
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    fileName: text("file_name"),
+    headers: jsonb("headers").$type<string[]>().notNull(),
+    rows: jsonb("rows").$type<string[][]>().notNull(),
+    rowCount: integer("row_count").notNull(),
+    /** first/last date found in the report, for the list view */
+    dateFrom: date("date_from"),
+    dateTo: date("date_to"),
+    notes: text("notes"),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("report_uploads_kind_idx").on(t.kind, t.uploadedAt)],
+);
+
 export type Member = typeof members.$inferSelect;
 export type Credential = typeof credentials.$inferSelect;
 export type MembershipRow = typeof memberships.$inferSelect;
 export type CheckInRow = typeof checkIns.$inferSelect;
 export type SaleRow = typeof sales.$inferSelect;
 export type ActivityRow = typeof activity.$inferSelect;
+export type ReportUpload = typeof reportUploads.$inferSelect;

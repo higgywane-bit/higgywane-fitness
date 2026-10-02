@@ -16,6 +16,11 @@ const FIRST = ["Nicha", "Poom", "Bella", "Aun", "Ploy", "Tae", "Mint", "Beam", "
 const LAST = ["Srisuk", "Wongsa", "Chaiyaporn", "Rattanakul", "Suwan", "Thongdee", "Boonmee", "Kittisak", "Phromma", "Saetang", "Inthong", "Jaidee", "Smith", "Walker", "Müller", "Rossi", "Tanaka", "Nguyen", "Brown", "Martin", "Kim", "Taylor", "Wilson", "Dubois"];
 const CAFE = ["Berry Hype", "Espresso Max", "Strong Vibes", "Latte", "Americano", "Bangkok Beat", "Thick", "Matcha Latte", "Banana Bam Bam", "OJ Classic", "Cappuccino"];
 
+// Cafe prices for demo receipts. TODO: confirm with cafe
+function price(item: string) {
+  return item === "Americano" ? 80 : item === "Latte" || item === "Cappuccino" ? 120 : item === "OJ Classic" ? 85 : item === "Bangkok Beat" ? 95 : 149;
+}
+
 function rng(seed: number) {
   return () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -131,23 +136,46 @@ export async function seedDemo(db: DB, now = new Date()) {
   // Till: cafe through the day + every membership sale.
   const till: (typeof sales.$inferInsert)[] = [];
   let receipt = 30000;
-  for (let day = 59; day >= 0; day--) {
+  for (let day = 395; day >= 0; day--) {
     const date = addDays(today, -day);
-    const n = 18 + Math.floor(r() * 22) + (new Date(`${date}T00:00:00Z`).getUTCDay() % 6 === 0 ? 10 : 0);
+    // the cafe has grown: fewer sales further back
+    const growth = 1 - day / 900;
+    const n = Math.round(growth * 18) + Math.floor(r() * 22) + (new Date(`${date}T00:00:00Z`).getUTCDay() % 6 === 0 ? 10 : 0);
     for (let k = 0; k < n; k++) {
       const hour = 6 + Math.floor(r() * 15);
       const at = new Date(`${date}T${String(hour).padStart(2, "0")}:${String(Math.floor(r() * 60)).padStart(2, "0")}:00+07:00`);
       if (at > now) continue;
       const item = pick(CAFE);
       const qty = r() > 0.8 ? 2 : 1;
-      const amount = (item === "Americano" ? 80 : item === "Latte" || item === "Cappuccino" ? 120 : 149) * qty;
-      till.push({ source: "demo", externalId: `R${receipt++}`, occurredAt: at, amountSatang: amount * 100, category: "cafe", description: qty > 1 ? `${item} ×2` : item, paymentMethod: pick(["QR PromptPay", "Cash", "Card"]) });
+      const amount = price(item) * qty;
+      const second = r() > 0.75 ? pick(CAFE) : null;
+      const items = [{ name: item, qty, amountSatang: amount * 100 }, ...(second ? [{ name: second, qty: 1, amountSatang: price(second) * 100 }] : [])];
+      till.push({
+        source: "demo",
+        externalId: `R${receipt++}`,
+        occurredAt: at,
+        amountSatang: items.reduce((a, i) => a + i.amountSatang, 0),
+        category: "cafe",
+        description: items.map((i) => (i.qty > 1 ? `${i.name} ×${i.qty}` : i.name)).join(", "),
+        paymentMethod: pick(["QR PromptPay", "Cash", "Card"]),
+        items,
+      });
     }
   }
   for (const m of ms) {
     const at = m.createdAt;
     if (at.getTime() < now.getTime() - 60 * 86_400_000 || at > now) continue;
-    till.push({ source: "demo", externalId: `R${receipt++}`, occurredAt: at, amountSatang: m.price * 100, category: m.kind === "pt" ? "pt" : "membership", description: m.planName, paymentMethod: "Card", memberId: m.memberId });
+    till.push({
+      source: "demo",
+      externalId: `R${receipt++}`,
+      occurredAt: at,
+      amountSatang: m.price * 100,
+      category: m.kind === "pt" ? "pt" : "membership",
+      description: m.planName,
+      paymentMethod: "Card",
+      memberId: m.memberId,
+      items: [{ name: m.planName, qty: 1, amountSatang: m.price * 100 }],
+    });
   }
   for (let i = 0; i < till.length; i += 500) await db.insert(sales).values(till.slice(i, i + 500));
 

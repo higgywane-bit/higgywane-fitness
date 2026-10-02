@@ -9,6 +9,7 @@ import * as svc from "@/lib/membership/service";
 import { importSales } from "@/lib/sales/service";
 import { getMailer } from "@/lib/email";
 import { sendReminders } from "@/lib/membership/reminder-service";
+import { saveLayout } from "@/lib/dashboard/layout";
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -139,4 +140,10 @@ export async function removeDemoAction() {
 
 export async function sendRemindersAction() {
   return run(async () => sendReminders(await getDb(), getMailer()));
+}
+
+/* ── Dashboard ────────────────────────────────────────────── */
+
+export async function saveDashboardAction(layout: unknown) {
+  return run(async () => saveLayout(await getDb(), layout));
 }

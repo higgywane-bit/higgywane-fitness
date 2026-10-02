@@ -23,6 +23,8 @@ export function BarChart({
   data,
   unit = "count",
   today,
+  labelFormat = "day",
+  summary = "total",
   tickEvery = 7,
   highlightLast = true,
   className,
@@ -31,13 +33,17 @@ export function BarChart({
   unit?: ChartUnit;
   /** gym-local date, so labels drop the year when it's this year */
   today: string;
+  /** "month" for monthly series (dates are the 1st of each month) */
+  labelFormat?: "day" | "month";
+  /** what the top-right figure shows: the sum, or the latest value (for levels like member counts) */
+  summary?: "total" | "latest";
   tickEvery?: number;
   highlightLast?: boolean;
   className?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const format = (n: number) => fmt(unit, n);
-  const label = (d: string) => formatDate(d, today);
+  const label = (d: string) => (labelFormat === "month" ? MONTH.format(new Date(`${d}T00:00:00Z`)) + (d.slice(0, 4) !== today.slice(0, 4) ? ` ${d.slice(2, 4)}` : "") : formatDate(d, today));
   const max = Math.max(1, ...data.map((d) => d.value));
   const shown = hover ?? data.length - 1;
   const total = data.reduce((a, d) => a + d.value, 0);
@@ -49,7 +55,9 @@ export function BarChart({
           <span className="tabular font-semibold text-white">{format(data[shown]?.value ?? 0)}</span>
           <span className="ml-1.5">{data[shown] ? label(data[shown].date) : ""}</span>
         </p>
-        <p className="tabular text-xs text-text-tertiary">{format(total)} total</p>
+        <p className="tabular text-xs text-text-tertiary">
+          {summary === "total" ? `${format(total)} total` : `now ${format(data.at(-1)?.value ?? 0)}`}
+        </p>
       </div>
       <div
         role="img"
@@ -93,6 +101,8 @@ export function BarChart({
     </div>
   );
 }
+
+const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 

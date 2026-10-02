@@ -3,6 +3,7 @@ import { TabBar } from "@/components/layout/tab-bar";
 import { FlyLayer } from "@/components/layout/fly-layer";
 import { AddToCartFeedback } from "@/components/motion/add-to-cart-feedback";
 import { CartDrawer } from "@/components/cart/cart-drawer";
+import { Leah } from "@/components/leah/leah";
 
 export default function SiteLayout({
   children,
@@ -25,6 +26,7 @@ export default function SiteLayout({
       {sheet}
       <FlyLayer />
       <AddToCartFeedback />
+      <Leah />
     </>
   );
 }

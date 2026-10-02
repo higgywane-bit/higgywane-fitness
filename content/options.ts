@@ -124,6 +124,33 @@ const groups: OptionGroup[] = [
       { id: "sf-vanilla", label: "Sugar-free vanilla", priceDelta: 15, ingredientId: "sf-vanilla", grams: 10 },
     ],
   },
+  // Merchandise options
+  {
+    id: "merch-size",
+    title: "Size",
+    type: "single",
+    required: true,
+    options: [
+      { id: "xs", label: "XS", priceDelta: 0 },
+      { id: "s", label: "S", priceDelta: 0, default: true },
+      { id: "m", label: "M", priceDelta: 0 },
+      { id: "l", label: "L", priceDelta: 0 },
+      { id: "xl", label: "XL", priceDelta: 0 },
+      { id: "xxl", label: "XXL", priceDelta: 50 },
+    ],
+  },
+  {
+    id: "merch-color",
+    title: "Color",
+    type: "single",
+    required: true,
+    options: [
+      { id: "black", label: "Black", priceDelta: 0, default: true },
+      { id: "white", label: "White", priceDelta: 0 },
+      { id: "red", label: "Superfit Red", priceDelta: 0 },
+      { id: "navy", label: "Navy", priceDelta: 0 },
+    ],
+  },
 ];
 
 export const optionGroups: Record<string, OptionGroup> = Object.fromEntries(groups.map((g) => [g.id, g]));

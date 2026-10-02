@@ -47,9 +47,9 @@ export type OptionGroup = {
   options: Option[];
 };
 
-export type CategoryId = "smoothies" | "juices" | "coffee" | "performance";
+export type CategoryId = "smoothies" | "coffee" | "food" | "merchandise";
 
-export type Tag = "high-protein" | "low-cal" | "vegan" | "caffeine";
+export type Tag = "high-protein" | "low-cal" | "vegan" | "caffeine" | "recovery" | "energy" | "pre-workout" | "post-workout" | "best-seller" | "high-caffeine" | "limited-edition";
 
 export type RecipeLine = {
   ingredientId: string;

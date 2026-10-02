@@ -18,15 +18,10 @@ type PricedProduct = {
 const cafe = pricing.sections.cafe.categories;
 
 export const categories: Category[] = [
-  { id: "smoothies", title: cafe.smoothies.title, blurb: "Blended to order with real protein." },
-  { id: "juices", title: cafe.juices.title, blurb: "Cold pressed, nothing added." },
-  { id: "coffee", title: cafe.coffee.title, blurb: "Double shot, your way." },
-  {
-    id: "performance",
-    title: cafe.performance.title,
-    blurb: "Pre-workout, recovery and supplements.",
-    status: cafe.performance.status,
-  },
+  { id: "smoothies", title: "Smoothies", blurb: "Blended to order with real protein and macros." },
+  { id: "coffee", title: "Coffee", blurb: "Double shot espresso, your way." },
+  { id: "food", title: "Food", blurb: "High-protein meals to fuel your day." },
+  { id: "merchandise", title: "Merchandise", blurb: "Superfit apparel and training gear." },
 ];
 
 type Recipe = {
@@ -262,11 +257,72 @@ function build(category: CategoryId, products: PricedProduct[]): MenuItem[] {
   });
 }
 
+// Food & Merchandise items (not in pricing.json yet; TODO: confirm with owner)
+const foodItems: PricedProduct[] = [
+  {
+    name: "Protein Waffles",
+    description: "Fluffy waffles with 20g protein. Served with berries and honey.",
+    price: 180,
+  },
+];
+
+const merchandiseItems: PricedProduct[] = [
+  // Women's
+  { name: "Superfit Sports Bra", description: "Women's high-support training top", price: 590 },
+  { name: "Superfit Training Shorts", description: "Women's 4-way stretch shorts", price: 450 },
+  { name: "Superfit Leggings", description: "Women's high-waist performance leggings", price: 650 },
+  // Men's
+  { name: "Superfit Singlet", description: "Men's premium athletic tank", price: 390 },
+  { name: "Superfit T-Shirt", description: "Men's organic cotton tee", price: 350 },
+];
+
+// Add basic recipes for food items
+recipes["Protein Waffles"] = {
+  recipe: [
+    { ingredientId: "banana", grams: 100, removable: true },
+  ],
+  tint: "#d4a373",
+  tags: ["high-protein", "best-seller"],
+  badges: ["Sold Daily"],
+  optionGroups: [],
+};
+
+// Merchandise items use simplified structure (no options/macros)
+const merchandiseRecipes: Record<string, Recipe> = {
+  "Superfit Sports Bra": {
+    recipe: [],
+    tint: "#e11d48",
+    optionGroups: ["merch-size", "merch-color"],
+  },
+  "Superfit Training Shorts": {
+    recipe: [],
+    tint: "#1c1c1c",
+    optionGroups: ["merch-size", "merch-color"],
+  },
+  "Superfit Leggings": {
+    recipe: [],
+    tint: "#1c1c1c",
+    optionGroups: ["merch-size", "merch-color"],
+  },
+  "Superfit Singlet": {
+    recipe: [],
+    tint: "#1c1c1c",
+    optionGroups: ["merch-size", "merch-color"],
+  },
+  "Superfit T-Shirt": {
+    recipe: [],
+    tint: "#ffffff",
+    optionGroups: ["merch-size", "merch-color"],
+  },
+};
+
+Object.assign(recipes, merchandiseRecipes);
+
 export const menu: MenuItem[] = [
   ...build("smoothies", cafe.smoothies.products),
-  ...build("juices", cafe.juices.products),
   ...build("coffee", cafe.coffee.products),
-  ...build("performance", cafe.performance.products as PricedProduct[]),
+  ...build("food", foodItems),
+  ...build("merchandise", merchandiseItems),
 ];
 
 export const menuById: Record<string, MenuItem> = Object.fromEntries(menu.map((m) => [m.id, m]));

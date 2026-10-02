@@ -8,6 +8,8 @@ import { DrinkArt } from "@/components/cafe/drink-art";
 import { OptionGroupView } from "@/components/cafe/option-groups";
 import { MacroPanel } from "@/components/macros/macro-panel";
 import { AnimatedNumber } from "@/components/motion/animated-number";
+import { AddToCartFeedback } from "@/components/motion/add-to-cart-feedback";
+import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
 import { haptic, useFly } from "@/lib/fly-store";
@@ -24,11 +26,30 @@ import {
 import { cn } from "@/lib/utils";
 
 export const TAG_LABEL = {
-  "high-protein": "High protein",
-  "low-cal": "Low cal",
+  "high-protein": "High Protein",
+  "low-cal": "Low Cal",
   vegan: "Vegan",
-  caffeine: "Caffeine",
+  caffeine: "High Caffeine",
+  recovery: "Recovery",
+  energy: "Energy",
+  "pre-workout": "Pre-Workout",
+  "post-workout": "Post-Workout",
+  "best-seller": "Best Seller",
+  "limited-edition": "Limited Edition",
 } as const;
+
+export const TAG_VARIANT_MAP: Record<keyof typeof TAG_LABEL, "protein" | "energy" | "recovery" | "bestseller" | "limited" | "default"> = {
+  "high-protein": "protein",
+  "low-cal": "default",
+  vegan: "default",
+  caffeine: "energy",
+  recovery: "recovery",
+  energy: "energy",
+  "pre-workout": "energy",
+  "post-workout": "recovery",
+  "best-seller": "bestseller",
+  "limited-edition": "limited",
+};
 
 type Layout = "sheet" | "modal" | "page";
 
@@ -61,6 +82,7 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
   const [qty, setQty] = useState(edit?.qty ?? 1);
   const [note, setNote] = useState(edit?.note ?? "");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [addedFeedback, setAddedFeedback] = useState(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const ctaRef = useRef<HTMLButtonElement>(null);
 
@@ -89,13 +111,18 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
 
   const submit = () => {
     const input = { itemId: item.id, selections, qty, note };
-    if (edit) replace(edit.lineId, input);
-    else {
+    if (edit) {
+      replace(edit.lineId, input);
+      haptic(18);
+      onDone?.();
+    } else {
       add(input);
       if (ctaRef.current) launch(ctaRef.current.getBoundingClientRect(), item.tint);
+      haptic(18);
+      setAddedFeedback(true);
+      // Show feedback then close after animation completes
+      setTimeout(() => onDone?.(), 2200);
     }
-    haptic(18);
-    onDone?.();
   };
 
   const isModal = layout === "modal";
@@ -129,15 +156,15 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
       <Title className="text-statement text-[44px] md:text-[52px]">{item.name}</Title>
       {item.description ? <p className="mt-2 text-[15px] text-text-secondary">{item.description}</p> : null}
       {item.tags?.length || item.badges?.length ? (
-        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Highlights">
+        <ul className="mt-3 flex flex-wrap gap-2" aria-label="Highlights">
           {item.badges?.map((b) => (
-            <li key={b} className="rounded-full bg-red-tint px-2.5 py-1 text-xs font-semibold text-red-text">
-              {b}
+            <li key={b}>
+              <Tag variant="bestseller">{b}</Tag>
             </li>
           ))}
           {item.tags?.map((t) => (
-            <li key={t} className="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-medium text-text-secondary">
-              {TAG_LABEL[t]}
+            <li key={t}>
+              <Tag variant={TAG_VARIANT_MAP[t as keyof typeof TAG_VARIANT_MAP]}>{TAG_LABEL[t as keyof typeof TAG_LABEL]}</Tag>
             </li>
           ))}
         </ul>
@@ -147,7 +174,6 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
 
   const details = (
     <>
-      <MacroPanel macros={macros} />
       <section aria-label="Ingredients" className="text-sm">
         <h3 className="text-[17px] font-semibold">What&apos;s in it</h3>
         <p className="mt-1.5 text-text-secondary">{ingredients.join(", ")}</p>
@@ -158,6 +184,25 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
         ) : null}
       </section>
     </>
+  );
+
+  const nutritionCompact = (
+    <section className="space-y-2 rounded-2xl bg-surface-2 p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-text-secondary">Nutrition</span>
+        <span className="text-2xl font-bold tabular">{Math.round(macros.kcal)}</span>
+      </div>
+      <div className="text-xs">
+        <div className="flex justify-between">
+          <span className="text-text-tertiary">Protein</span>
+          <span className="tabular font-medium text-red">{Math.round(macros.protein)}g</span>
+        </div>
+        <div className="mt-1 flex justify-between">
+          <span className="text-text-tertiary">Carbs</span>
+          <span className="tabular font-medium text-white">{Math.round(macros.carbs)}g</span>
+        </div>
+      </div>
+    </section>
   );
 
   const options = (
@@ -250,54 +295,80 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
 
   if (isModal) {
     return (
-      <div className="grid h-[min(88dvh,820px)] w-[min(92vw,1000px)] grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-        <div className="relative overflow-y-auto border-r border-hairline">
-          <div className="h-[300px]">{header}</div>
-          <div className="space-y-6 p-6">
-            {intro}
-            {details}
+      <>
+        <div className="grid h-[min(88dvh,820px)] w-[min(92vw,1000px)] grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+          <div className="relative overflow-y-auto border-r border-hairline">
+            <div className="h-[300px]">{header}</div>
+            <div className="space-y-6 p-6">
+              {intro}
+              {details}
+            </div>
+          </div>
+          <div className="flex min-h-0 flex-col">
+            <div className="flex-1 space-y-7 overflow-y-auto p-6">
+              {options}
+              {nutritionCompact}
+            </div>
+            {footer}
           </div>
         </div>
-        <div className="flex min-h-0 flex-col">
-          <div className="flex-1 space-y-7 overflow-y-auto p-6">{options}</div>
-          {footer}
-        </div>
-      </div>
+        <AddToCartFeedback
+          itemName={item.name}
+          isVisible={addedFeedback}
+          onDismiss={() => setAddedFeedback(false)}
+        />
+      </>
     );
   }
 
   if (layout === "page") {
     return (
-      <div className="mx-auto max-w-6xl md:grid md:grid-cols-2 md:gap-10 md:px-8 md:py-10">
-        <div className="space-y-6 px-4 pt-4 md:sticky md:top-24 md:self-start md:px-0 md:pt-0">
-          {header}
-          {intro}
-          {details}
-        </div>
-        <div className="flex flex-col">
-          <div className="space-y-7 px-4 pt-6 pb-8 md:px-0 md:pt-0">
-            {options}
+      <>
+        <div className="mx-auto max-w-6xl md:grid md:grid-cols-2 md:gap-10 md:px-8 md:py-10">
+          <div className="space-y-6 px-4 pt-4 md:sticky md:top-24 md:self-start md:px-0 md:pt-0">
+            {header}
+            {intro}
+            {details}
           </div>
-          {footer}
+          <div className="flex flex-col">
+            <div className="space-y-7 px-4 pt-6 pb-8 md:px-0 md:pt-0">
+              {options}
+              {nutritionCompact}
+            </div>
+            {footer}
+          </div>
         </div>
-      </div>
+        <AddToCartFeedback
+          itemName={item.name}
+          isVisible={addedFeedback}
+          onDismiss={() => setAddedFeedback(false)}
+        />
+      </>
     );
   }
 
   // sheet
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="px-4">
-          <div className="overflow-hidden rounded-3xl">{header}</div>
+    <>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="px-4">
+            <div className="overflow-hidden rounded-3xl">{header}</div>
+          </div>
+          <div className="space-y-7 px-4 pt-5 pb-8">
+            {intro}
+            {details}
+            {options}
+            {nutritionCompact}
+          </div>
         </div>
-        <div className="space-y-7 px-4 pt-5 pb-8">
-          {intro}
-          {details}
-          {options}
-        </div>
+        {footer}
       </div>
-      {footer}
-    </div>
+      <AddToCartFeedback
+        itemName={item.name}
+        isVisible={addedFeedback}
+        onDismiss={() => setAddedFeedback(false)}
+      />
+    </>
   );
 }

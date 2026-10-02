@@ -117,6 +117,7 @@ export function MenuView() {
             <ul className="no-scrollbar relative flex gap-2 overflow-x-auto px-4 py-2.5 md:px-0 md:py-0">
               {categories.map((c) => {
                 const on = !searching && active === c.id;
+                const categoryAccent = c.id === "smoothies" ? "yellow" : c.id === "coffee" ? "blue" : undefined;
                 return (
                   <li key={c.id}>
                     <button
@@ -127,8 +128,12 @@ export function MenuView() {
                       onClick={() => jump(c.id)}
                       aria-current={on ? "true" : undefined}
                       className={cn(
-                        "tap h-11 rounded-full px-5 text-[15px] font-semibold whitespace-nowrap",
-                        on ? "bg-white text-black" : "bg-surface-2 text-text-secondary hover:text-white",
+                        "tap h-11 rounded-full px-5 text-[15px] font-semibold whitespace-nowrap transition-colors duration-200",
+                        on ? "bg-white text-black shadow-[0_4px_12px_rgb(0_0_0/0.3)]" : cn(
+                          "bg-surface-2 text-text-secondary hover:text-white",
+                          categoryAccent === "yellow" && "hover:bg-yellow-tint",
+                          categoryAccent === "blue" && "hover:bg-blue-tint",
+                        ),
                       )}
                     >
                       {c.title}

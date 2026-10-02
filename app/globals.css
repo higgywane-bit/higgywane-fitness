@@ -25,12 +25,20 @@
   --text-secondary: #b3b3b3;
   --text-tertiary: #8c8c8c;
 
-  /* the one accent */
+  /* accents */
   --red: #e11d48;
   --red-hover: #f0264f;
   --red-press: #c8163e;
   --red-text: #ff4d6a; /* red used as text on dark surfaces (AA on #141414) */
   --red-tint: rgb(225 29 72 / 0.14);
+
+  /* premium accent system: electric baby blue + bright yellow */
+  --blue: #3b82f6; /* electric baby blue, energetic but not cyberpunk */
+  --blue-hover: #60a5fa;
+  --blue-tint: rgb(59 130 246 / 0.16);
+  --yellow: #fbbf24; /* bright sports/neon yellow, athletic energy */
+  --yellow-hover: #fcd34d;
+  --yellow-tint: rgb(251 191 36 / 0.16);
 
   /* macro roles (always paired with a text label) */
   --macro-protein: var(--red);
@@ -84,6 +92,12 @@
   --color-red-press: var(--red-press);
   --color-red-text: var(--red-text);
   --color-red-tint: var(--red-tint);
+  --color-blue: var(--blue);
+  --color-blue-hover: var(--blue-hover);
+  --color-blue-tint: var(--blue-tint);
+  --color-yellow: var(--yellow);
+  --color-yellow-hover: var(--yellow-hover);
+  --color-yellow-tint: var(--yellow-tint);
   --color-protein: var(--macro-protein);
   --color-carbs: var(--macro-carbs);
   --color-fat: var(--macro-fat);

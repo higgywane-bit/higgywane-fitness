@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { X } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import type { MenuItem, Option, OptionGroup, Selections } from "@/content/types";
 import { formatTHBDelta } from "@/lib/format";
 import { optionImpact } from "@/lib/nutrition";
+import { SelectGlow } from "@/components/motion/select-glow";
+import { CheckIndicator as Indicator } from "@/components/ui/check-indicator";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -41,9 +43,11 @@ function GroupHeader({ group, count }: { group: OptionGroup; count: number }) {
   );
 }
 
+const POP = { type: "spring", stiffness: 560, damping: 28 } as const;
+
 function SingleGroup({ item, group, selections, onToggle }: Props) {
   const current = selections[group.id]?.[0];
-  const cols = group.options.length === 2 ? "grid-cols-2" : group.options.length === 3 ? "grid-cols-3" : "grid-cols-2";
+  const cols = group.options.length === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
     <div role="radiogroup" aria-labelledby={`grp-${group.id}`} className={cn("grid gap-2", cols)}>
       {group.options.map((o) => {
@@ -51,38 +55,26 @@ function SingleGroup({ item, group, selections, onToggle }: Props) {
         const price = formatTHBDelta(o.priceDelta);
         const impact = on ? null : impactLabel(item, selections, group, o);
         return (
-          <motion.button
+          <button
             key={o.id}
             type="button"
             role="radio"
             aria-checked={on}
             onClick={() => onToggle(group.id, o.id)}
             className={cn(
-              "tap relative flex min-h-[60px] flex-col items-start justify-center rounded-2xl border px-3.5 py-2.5 text-left",
-              on ? "border-white bg-white text-black" : "border-hairline-strong bg-surface-2 hover:border-white/30",
+              "tap relative isolate flex min-h-[64px] flex-col justify-center overflow-hidden rounded-2xl px-3.5 py-2.5 text-left",
+              on ? "glass-lit" : "glass hover:bg-white/[0.08]",
             )}
-            animate={{
-              backgroundColor: on ? "rgb(255, 255, 255)" : "transparent",
-              borderColor: on ? "rgb(255, 255, 255)" : "currentColor",
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            whileTap={{ scale: 0.95 }}
           >
-            <motion.span
-              className="text-[15px] leading-tight font-semibold"
-              animate={{ color: on ? "rgb(0, 0, 0)" : "rgb(229, 231, 235)" }}
-              transition={{ duration: 0.15 }}
-            >
-              {o.label}
-            </motion.span>
-            <motion.span
-              className={cn("mt-0.5 text-xs leading-tight")}
-              animate={{ color: on ? "rgb(0, 0, 0, 0.6)" : "rgb(107, 114, 128)" }}
-              transition={{ duration: 0.15 }}
-            >
-              {[o.detail, price].filter(Boolean).join("  ") || impact || " "}
-            </motion.span>
-          </motion.button>
+            <SelectGlow on={on} />
+            <span className="flex items-start justify-between gap-2">
+              <span className="text-[15px] leading-tight font-semibold">{o.label}</span>
+              <Indicator on={on} className="mt-px size-[18px]" />
+            </span>
+            <span className={cn("mt-1 text-xs leading-tight", on ? "text-white/75" : "text-text-tertiary")}>
+              {[o.detail, price].filter(Boolean).join(" · ") || impact || "\u00a0"}
+            </span>
+          </button>
         );
       })}
     </div>
@@ -93,77 +85,42 @@ function MultiGroup({ item, group, selections, onToggle }: Props) {
   const current = selections[group.id] ?? [];
   const full = group.max !== undefined && current.length >= group.max;
   return (
-    <ul aria-labelledby={`grp-${group.id}`} className="overflow-hidden rounded-2xl bg-surface-2">
+    <ul aria-labelledby={`grp-${group.id}`} className="glass overflow-hidden rounded-2xl">
       {group.options.map((o, i) => {
         const on = current.includes(o.id);
         const disabled = !on && full;
         const impact = impactLabel(item, selections, group, o);
         return (
           <li key={o.id} className={cn(i > 0 && "border-t border-hairline")}>
-            <motion.button
+            <button
               type="button"
               role="checkbox"
               aria-checked={on}
               aria-disabled={disabled}
               onClick={() => !disabled && onToggle(group.id, o.id)}
               className={cn(
-                "flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                disabled ? "cursor-not-allowed opacity-40" : "hover:bg-surface-3 active:scale-[0.98]",
+                "tap relative isolate flex min-h-[60px] w-full items-center gap-3 overflow-hidden px-4 py-2.5 text-left",
+                disabled && "cursor-not-allowed opacity-40",
+                on ? "bg-white/[0.09]" : !disabled && "hover:bg-white/[0.05]",
               )}
-              whileTap={{ scale: disabled ? 1 : 0.98 }}
             >
-              <motion.span
-                aria-hidden
-                className={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full border",
-                  on ? "border-red bg-red text-white" : "border-hairline-strong bg-surface-2",
-                )}
-                animate={{
-                  backgroundColor: on ? "rgb(220, 38, 38)" : "transparent",
-                  borderColor: on ? "rgb(220, 38, 38)" : "currentColor",
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              >
-                <AnimatePresence mode="wait">
-                  {on ? (
-                    <motion.div
-                      key="check"
-                      initial={{ scale: 0, rotate: -90 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      exit={{ scale: 0, rotate: 90 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                      <Check className="size-3.5 stroke-white" strokeWidth={3} />
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
-              </motion.span>
-              <motion.span
-                className="min-w-0 flex-1"
-                animate={{ opacity: disabled ? 0.6 : 1 }}
-                transition={{ duration: 0.15 }}
-              >
+              <SelectGlow on={on} />
+              <Indicator on={on} className="size-6" />
+              <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-medium">{o.label}</span>
                 {o.detail ? <span className="block text-xs text-text-tertiary">{o.detail}</span> : null}
-              </motion.span>
-              <motion.span
-                className="shrink-0 text-right"
-                animate={{ opacity: disabled ? 0.6 : 1, scale: on ? 1.05 : 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              >
-                <span className="tabular block text-[15px] font-semibold">{formatTHBDelta(o.priceDelta)}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className={cn("tabular block text-[15px] font-semibold", !on && "text-text-secondary")}>
+                  {formatTHBDelta(o.priceDelta)}
+                </span>
                 {impact ? (
-                  <motion.span
-                    className={cn("tabular block text-xs", impact.includes("protein") ? "text-red-text" : "text-text-tertiary")}
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
+                  <span className={cn("tabular block text-xs", impact.includes("protein") ? "text-red-text" : "text-text-tertiary")}>
                     {impact}
-                  </motion.span>
+                  </span>
                 ) : null}
-              </motion.span>
-            </motion.button>
+              </span>
+            </button>
           </li>
         );
       })}
@@ -172,49 +129,37 @@ function MultiGroup({ item, group, selections, onToggle }: Props) {
 }
 
 function RemoveGroup({ group, selections, onToggle }: Props) {
+  const reduce = useReducedMotion();
   const current = selections[group.id] ?? [];
   return (
     <div aria-labelledby={`grp-${group.id}`} className="flex flex-wrap gap-2">
       {group.options.map((o) => {
         const on = current.includes(o.id);
         return (
-          <motion.button
+          <button
             key={o.id}
             type="button"
             role="checkbox"
             aria-checked={on}
             onClick={() => onToggle(group.id, o.id)}
             className={cn(
-              "tap flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium",
-              on ? "border-white bg-white text-black" : "border-hairline-strong text-text-secondary hover:text-white",
+              "tap relative isolate flex h-11 items-center gap-2 overflow-hidden rounded-full px-4 text-sm font-medium",
+              on ? "glass-lit" : "glass text-text-secondary hover:text-white",
             )}
-            animate={{
-              backgroundColor: on ? "rgb(255, 255, 255)" : "transparent",
-              borderColor: on ? "rgb(255, 255, 255)" : "currentColor",
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            whileTap={{ scale: 0.93 }}
           >
-            <AnimatePresence mode="wait">
-              {on ? (
-                <motion.div
-                  key="x"
-                  initial={{ scale: 0, rotate: 90 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  exit={{ scale: 0, rotate: -90 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <X className="size-4 stroke-black" strokeWidth={2.5} aria-hidden />
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-            <motion.span
-              animate={{ color: on ? "rgb(0, 0, 0)" : "currentColor" }}
-              transition={{ duration: 0.15 }}
-            >
-              {o.label}
-            </motion.span>
-          </motion.button>
+            <SelectGlow on={on} />
+            {on ? (
+              <motion.span
+                aria-hidden
+                initial={reduce ? false : { scale: 0, rotate: 90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={POP}
+              >
+                <X className="size-4" strokeWidth={2.5} />
+              </motion.span>
+            ) : null}
+            <span className={cn(on && "line-through decoration-white/50")}>{o.label}</span>
+          </button>
         );
       })}
     </div>

@@ -14,6 +14,7 @@ import {
   macroSplit,
   optionImpact,
   selectionSummary,
+  sumMacros,
   toggleOption,
 } from "@/lib/nutrition";
 
@@ -43,10 +44,16 @@ describe("itemMacros", () => {
   it("sums recipe plus default base", () => {
     const m = item("berry-hype");
     const macros = itemMacros(m, defaultSelections(m));
-    // Berry Hype includes: mixed-berries (150g), banana (60g), whey-vanilla (30g), honey (10g), plus default base
-    // This should be a substantial amount of macros
-    expect(macros.kcal).toBeGreaterThan(200);
-    expect(macros.protein).toBeGreaterThan(15);
+    const expected = sumMacros([
+      ingredientMacros("mixed-berries", 150),
+      ingredientMacros("banana", 60),
+      ingredientMacros("whey-vanilla", 30),
+      ingredientMacros("honey", 10),
+      ingredientMacros("almond-milk", 250),
+    ]);
+    for (const k of Object.keys(expected) as (keyof typeof expected)[]) {
+      expect(macros[k] ?? 0, k).toBeCloseTo(expected[k] ?? 0, 6);
+    }
   });
 
   it("Large scales the recipe and base but not add-ons", () => {

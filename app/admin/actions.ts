@@ -7,6 +7,8 @@ import { planImport, removeDemoData, runImport, type ImportPlan } from "@/lib/me
 import type { ImportMapping } from "@/lib/membership/glofox";
 import * as svc from "@/lib/membership/service";
 import { importSales } from "@/lib/sales/service";
+import { getMailer } from "@/lib/email";
+import { sendReminders } from "@/lib/membership/reminder-service";
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -133,4 +135,8 @@ export async function importSalesAction(csv: string) {
 
 export async function removeDemoAction() {
   return run(async () => removeDemoData(await getDb()));
+}
+
+export async function sendRemindersAction() {
+  return run(async () => sendReminders(await getDb(), getMailer()));
 }

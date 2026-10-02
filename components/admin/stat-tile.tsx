@@ -21,7 +21,7 @@ export function StatTile({
   const body = (
     <>
       <p className="text-[13px] font-medium text-text-secondary">{label}</p>
-      <p className={cn("font-display tabular mt-2 text-[44px] leading-none md:text-[52px]", tone === "warn" && "text-energy")}>{value}</p>
+      <p className={cn("font-display tabular mt-2 text-[clamp(28px,8.5vw,44px)] leading-none whitespace-nowrap md:text-[52px]", tone === "warn" && "text-energy")}>{value}</p>
       <div className="mt-2 flex min-h-5 flex-wrap items-center gap-x-2 text-[13px] text-text-tertiary">
         {change != null ? (
           <span className={cn("inline-flex items-center gap-0.5 font-semibold", change >= 0 ? "text-success" : "text-red-text")}>

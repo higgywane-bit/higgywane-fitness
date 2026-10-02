@@ -13,7 +13,7 @@ import { daysLeftLabel, expiredLabel } from "@/lib/membership/access";
 import { formatDate } from "@/lib/membership/dates";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: { absolute: "Dashboard | Superfit Admin" } };
 
 const CATEGORY: Record<string, string> = { membership: "Memberships", pt: "Personal training", cafe: "Cafe", retail: "Retail", other: "Other" };
 

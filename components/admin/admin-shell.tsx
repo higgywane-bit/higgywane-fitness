@@ -1,18 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV, isAdminActive } from "./nav";
 
-function Shell({ children }: { children: React.ReactNode }) {
+export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const focus = useSearchParams().get("focus") === "1";
-
-  if (focus) return <div className="min-h-dvh bg-background">{children}</div>;
 
   return (
     <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[232px_1fr]">
@@ -97,13 +93,5 @@ function Shell({ children }: { children: React.ReactNode }) {
         </ul>
       </nav>
     </div>
-  );
-}
-
-export function AdminShell({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={<div className="min-h-dvh bg-background">{children}</div>}>
-      <Shell>{children}</Shell>
-    </Suspense>
   );
 }

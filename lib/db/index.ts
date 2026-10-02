@@ -14,7 +14,8 @@ async function init(): Promise<DB> {
   const url = process.env.DATABASE_URL;
   const { db, local } = await createDb({
     url,
-    dataDir: process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite"),
+    // Vercel previews without DATABASE_URL get a throwaway demo database in /tmp.
+    dataDir: process.env.PGLITE_DIR ?? (process.env.VERCEL ? "/tmp/superfit-pglite" : path.join(process.cwd(), ".data", "pglite")),
   });
   // Local database starts with demo members so every screen has something to show.
   if (local && process.env.SEED_DEMO !== "0") {

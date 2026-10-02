@@ -247,7 +247,7 @@ export function ImportWizard() {
 
           {plan.errors.length ? (
             <div className="rounded-3xl bg-red/10 p-4 text-sm ring-1 ring-red/30 ring-inset">
-              <p className="font-semibold text-red-text">{plan.errors.length} rows can&apos;t be imported</p>
+              <p className="font-semibold text-red-text">{plan.errors.length} {plan.errors.length === 1 ? "row" : "rows"} can&apos;t be imported</p>
               <p className="mt-1 text-text-secondary">
                 {plan.errors
                   .slice(0, 12)

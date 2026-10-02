@@ -100,3 +100,34 @@ export type CartLine = {
   unitPrice: number;
   unitMacros: Macros;
 };
+
+/* ------------------------------------------------------------------ coaches */
+
+export type SpecialtyId =
+  | "bodybuilding-prep"
+  | "womens-recomp"
+  | "glutes"
+  | "posing"
+  | "fat-loss"
+  | "nutrition"
+  | "strength"
+  | "get-jacked"
+  | "mobility"
+  | "beginners";
+
+export type Specialty = { id: SpecialtyId; label: string; blurb: string };
+
+export type Coach = {
+  slug: string;
+  name: string;
+  title: string;
+  tagline: string;
+  specialties: SpecialtyId[];
+  about: string[];
+  approach: { title: string; body: string }[];
+  /** ISO weekdays the coach takes sessions, 1 = Monday … 7 = Sunday */
+  weekdays: number[];
+  /** session start times, "HH:MM" in Bangkok time */
+  slots: string[];
+  contact?: { line?: string; instagram?: string };
+};

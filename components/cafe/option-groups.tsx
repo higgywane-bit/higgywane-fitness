@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, X } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { X } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import type { MenuItem, Option, OptionGroup, Selections } from "@/content/types";
 import { formatTHBDelta } from "@/lib/format";
 import { optionImpact } from "@/lib/nutrition";
 import { SelectGlow } from "@/components/motion/select-glow";
+import { CheckIndicator as Indicator } from "@/components/ui/check-indicator";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -43,34 +44,6 @@ function GroupHeader({ group, count }: { group: OptionGroup; count: number }) {
 }
 
 const POP = { type: "spring", stiffness: 560, damping: 28 } as const;
-
-function Indicator({ on, className }: { on: boolean; className?: string }) {
-  const reduce = useReducedMotion();
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "grid shrink-0 place-items-center rounded-full transition-[background-color,box-shadow] duration-200",
-        on ? "bg-white text-black shadow-[0_0_14px_rgb(255_255_255/0.45)]" : "shadow-[inset_0_0_0_1.5px_rgb(255_255_255/0.28)]",
-        className,
-      )}
-    >
-      <AnimatePresence initial={false}>
-        {on ? (
-          <motion.span
-            key="check"
-            initial={reduce ? false : { scale: 0, rotate: -30 }}
-            animate={{ scale: 1, rotate: 0 }}
-            exit={reduce ? undefined : { scale: 0, transition: { duration: 0.1 } }}
-            transition={POP}
-          >
-            <Check className="size-3" strokeWidth={3.5} />
-          </motion.span>
-        ) : null}
-      </AnimatePresence>
-    </span>
-  );
-}
 
 function SingleGroup({ item, group, selections, onToggle }: Props) {
   const current = selections[group.id]?.[0];

@@ -1,50 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { MenuItem } from "@/content/types";
 import { DrinkArt } from "@/components/cafe/drink-art";
-import { Tag, type TagVariant } from "@/components/ui/tag";
+import { ItemTag } from "@/components/ui/tag";
 import { useCart } from "@/lib/cart-store";
 import { haptic, useFly } from "@/lib/fly-store";
 import { formatTHB } from "@/lib/format";
 import { itemDefaults, roundMacros } from "@/lib/nutrition";
-
-const TAG_VARIANT_MAP: Record<string, TagVariant> = {
-  "high-protein": "protein",
-  "low-cal": "default",
-  vegan: "default",
-  caffeine: "energy",
-  recovery: "recovery",
-  energy: "energy",
-  "pre-workout": "energy",
-  "post-workout": "recovery",
-  "best-seller": "bestseller",
-  "limited-edition": "limited",
-};
-
-const TAG_LABEL: Record<string, string> = {
-  "high-protein": "High Protein",
-  "low-cal": "Low Cal",
-  vegan: "Vegan",
-  caffeine: "High Caffeine",
-  recovery: "Recovery",
-  energy: "Energy",
-  "pre-workout": "Pre-Workout",
-  "post-workout": "Post-Workout",
-  "best-seller": "Best Seller",
-  "limited-edition": "Limited Edition",
-};
+import { cn } from "@/lib/utils";
 
 export function ProductCard({ item, priority }: { item: MenuItem; priority?: boolean }) {
   const add = useCart((s) => s.add);
   const launch = useFly((s) => s.launch);
+  const notify = useFly((s) => s.notify);
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const t = setTimeout(() => setAdded(false), 1100);
+    return () => clearTimeout(t);
+  }, [added]);
   const { selections, macros } = itemDefaults(item);
   const m = roundMacros(macros);
 
   const quickAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
     add({ itemId: item.id, selections, qty: 1 });
     launch(e.currentTarget.getBoundingClientRect(), item.tint);
+    notify(`${item.name} added`);
+    setAdded(true);
     haptic(14);
   };
 
@@ -66,10 +51,8 @@ export function ProductCard({ item, priority }: { item: MenuItem; priority?: boo
           <h3 className="font-display text-[22px] uppercase md:text-2xl">{item.name}</h3>
           {item.tags?.length ? (
             <div className="mt-2 flex flex-wrap gap-1">
-              {item.tags.slice(0, 1).map((t) => (
-                <Tag key={t} variant={TAG_VARIANT_MAP[t] || "default"} className="text-xs">
-                  {TAG_LABEL[t]}
-                </Tag>
+              {item.tags.slice(0, 2).map((t) => (
+                <ItemTag key={t} tag={t} />
               ))}
             </div>
           ) : null}
@@ -93,9 +76,14 @@ export function ProductCard({ item, priority }: { item: MenuItem; priority?: boo
           type="button"
           onClick={quickAdd}
           aria-label={`Quick add ${item.name}`}
-          className="tap pointer-events-auto absolute right-2 bottom-2 grid size-12 place-items-center rounded-full bg-yellow text-black shadow-[0_8px_24px_rgb(251_191_36/0.35)] transition-all duration-200 hover:bg-yellow-hover active:scale-95"
+          className={cn(
+            "tap pointer-events-auto absolute right-2 bottom-2 grid size-12 place-items-center rounded-full backdrop-blur-xl backdrop-saturate-150",
+            added
+              ? "bg-white text-black shadow-[0_0_24px_rgb(255_255_255/0.45)]"
+              : "bg-black/35 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.22),inset_0_0_0_1px_rgb(255_255_255/0.2)] hover:bg-black/50",
+          )}
         >
-          <Plus className="size-6" strokeWidth={2.5} />
+          {added ? <Check className="size-5" strokeWidth={3} /> : <Plus className="size-6" strokeWidth={2.25} />}
         </button>
       </div>
     </article>

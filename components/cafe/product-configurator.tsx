@@ -6,10 +6,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { MenuItem, Selections } from "@/content/types";
 import { DrinkArt } from "@/components/cafe/drink-art";
 import { OptionGroupView } from "@/components/cafe/option-groups";
-import { MacroPanel } from "@/components/macros/macro-panel";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { AddToCartFeedback } from "@/components/motion/add-to-cart-feedback";
-import { Tag } from "@/components/ui/tag";
+import { ItemTag, Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
 import { haptic, useFly } from "@/lib/fly-store";
@@ -24,32 +22,6 @@ import {
   optionImpact,
 } from "@/lib/nutrition";
 import { cn } from "@/lib/utils";
-
-export const TAG_LABEL = {
-  "high-protein": "High Protein",
-  "low-cal": "Low Cal",
-  vegan: "Vegan",
-  caffeine: "High Caffeine",
-  recovery: "Recovery",
-  energy: "Energy",
-  "pre-workout": "Pre-Workout",
-  "post-workout": "Post-Workout",
-  "best-seller": "Best Seller",
-  "limited-edition": "Limited Edition",
-} as const;
-
-export const TAG_VARIANT_MAP: Record<keyof typeof TAG_LABEL, "protein" | "energy" | "recovery" | "bestseller" | "limited" | "default"> = {
-  "high-protein": "protein",
-  "low-cal": "default",
-  vegan: "default",
-  caffeine: "energy",
-  recovery: "recovery",
-  energy: "energy",
-  "pre-workout": "energy",
-  "post-workout": "recovery",
-  "best-seller": "bestseller",
-  "limited-edition": "limited",
-};
 
 type Layout = "sheet" | "modal" | "page";
 
@@ -70,7 +42,7 @@ function describeImpact(price: number, protein: number, kcal: number): Feedback 
   const p = Math.round(protein);
   const k = Math.round(kcal);
   const text =
-    Math.abs(p) >= 3 ? `${p > 0 ? "+" : ""}${p} g protein` : Math.abs(k) >= 5 ? `${k > 0 ? "+" : ""}${k} kcal` : "";
+    Math.abs(p) >= 3 ? `${p > 0 ? "+" : ""}${p}g protein` : Math.abs(k) >= 5 ? `${k > 0 ? "+" : ""}${k} kcal` : "";
   const priceText = formatTHBDelta(price);
   if (!text && !priceText) return null;
   return { id: Date.now(), text, price: priceText };
@@ -82,13 +54,13 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
   const [qty, setQty] = useState(edit?.qty ?? 1);
   const [note, setNote] = useState(edit?.note ?? "");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [addedFeedback, setAddedFeedback] = useState(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const ctaRef = useRef<HTMLButtonElement>(null);
 
   const add = useCart((s) => s.add);
   const replace = useCart((s) => s.replace);
   const launch = useFly((s) => s.launch);
+  const notify = useFly((s) => s.notify);
 
   const macros = useMemo(() => itemMacros(item, selections), [item, selections]);
   const unitPrice = useMemo(() => itemPrice(item, selections), [item, selections]);
@@ -119,9 +91,8 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
       add(input);
       if (ctaRef.current) launch(ctaRef.current.getBoundingClientRect(), item.tint);
       haptic(18);
-      setAddedFeedback(true);
-      // Show feedback then close after animation completes
-      setTimeout(() => onDone?.(), 2200);
+      notify(qty > 1 ? `${qty} × ${item.name} added` : `${item.name} added`);
+      onDone?.();
     }
   };
 
@@ -159,12 +130,12 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
         <ul className="mt-3 flex flex-wrap gap-2" aria-label="Highlights">
           {item.badges?.map((b) => (
             <li key={b}>
-              <Tag variant="bestseller">{b}</Tag>
+              <Tag>{b}</Tag>
             </li>
           ))}
           {item.tags?.map((t) => (
             <li key={t}>
-              <Tag variant={TAG_VARIANT_MAP[t as keyof typeof TAG_VARIANT_MAP]}>{TAG_LABEL[t as keyof typeof TAG_LABEL]}</Tag>
+              <ItemTag tag={t} />
             </li>
           ))}
         </ul>
@@ -187,21 +158,29 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
   );
 
   const nutritionCompact = (
-    <section className="space-y-2 rounded-2xl bg-surface-2 p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-text-secondary">Nutrition</span>
-        <span className="text-2xl font-bold tabular">{Math.round(macros.kcal)}</span>
+    <section aria-label="Nutrition" className="glass rounded-2xl p-4">
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-sm font-semibold text-text-secondary">Nutrition</h3>
+        <p className="tabular text-sm text-text-secondary">
+          <AnimatedNumber value={macros.kcal} className="text-xl font-bold text-white" /> kcal
+        </p>
       </div>
-      <div className="text-xs">
-        <div className="flex justify-between">
-          <span className="text-text-tertiary">Protein</span>
-          <span className="tabular font-medium text-red">{Math.round(macros.protein)}g</span>
-        </div>
-        <div className="mt-1 flex justify-between">
-          <span className="text-text-tertiary">Carbs</span>
-          <span className="tabular font-medium text-white">{Math.round(macros.carbs)}g</span>
-        </div>
-      </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {(
+          [
+            ["Protein", macros.protein, "text-red-text"],
+            ["Carbs", macros.carbs, "text-white"],
+            ["Fat", macros.fat, "text-white"],
+          ] as const
+        ).map(([label, value, tone]) => (
+          <div key={label} className="rounded-xl bg-white/[0.04] py-2">
+            <dd className={cn("tabular text-base font-semibold", tone)}>
+              <AnimatedNumber value={value} />g
+            </dd>
+            <dt className="text-[11px] text-text-tertiary">{label}</dt>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 
@@ -229,36 +208,19 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
   const footer = (
     <div
       className={cn(
-        "relative z-10 border-t border-hairline bg-surface-1/95 px-4 pt-3 backdrop-blur-xl md:px-6",
+        "relative z-10 border-t border-hairline bg-surface-1/80 px-4 pt-3 backdrop-blur-2xl backdrop-saturate-150 md:px-6",
         layout === "page" ? "pb-safe sticky bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] md:bottom-0" : "pb-safe",
       )}
     >
-      <AnimatePresence>
-        {feedback ? (
-          <motion.div
-            key={feedback.id}
-            role="status"
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="pointer-events-none absolute -top-12 left-1/2 flex -translate-x-1/2 items-center gap-2.5 rounded-full bg-white px-4 py-2 text-sm font-semibold whitespace-nowrap text-black shadow-[0_8px_30px_rgb(0_0_0/0.5)]"
-          >
-            {feedback.text ? <span>{feedback.text}</span> : null}
-            {feedback.text && feedback.price ? <span aria-hidden className="h-3.5 w-px bg-black/20" /> : null}
-            {feedback.price ? <span className="tabular">{feedback.price}</span> : null}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
 
-      <div className="flex items-center gap-3 pb-3">
-        <div className="flex h-14 shrink-0 items-center rounded-full bg-surface-3" role="group" aria-label="Quantity">
+      <div className="flex items-center gap-2.5 pb-3">
+        <div className="glass flex h-14 shrink-0 items-center rounded-full" role="group" aria-label="Quantity">
           <button
             type="button"
             onClick={() => setQty((q) => Math.max(1, q - 1))}
             disabled={qty <= 1}
             aria-label="Decrease quantity"
-            className="tap grid size-12 place-items-center rounded-full disabled:opacity-30"
+            className="tap grid size-11 place-items-center rounded-full disabled:opacity-30"
           >
             <Minus className="size-4" />
           </button>
@@ -269,7 +231,7 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
             type="button"
             onClick={() => setQty((q) => Math.min(20, q + 1))}
             aria-label="Increase quantity"
-            className="tap grid size-12 place-items-center rounded-full"
+            className="tap grid size-11 place-items-center rounded-full"
           >
             <Plus className="size-4" />
           </button>
@@ -279,13 +241,31 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
           ref={ctaRef}
           type="button"
           onClick={submit}
-          className="tap flex h-14 min-w-0 flex-1 items-center justify-between gap-3 rounded-full bg-red pr-5 pl-6 text-white hover:bg-red-hover active:bg-red-press"
+          className="tap flex h-14 min-w-0 flex-1 items-center justify-between gap-2 rounded-full bg-red pr-4 pl-5 text-white hover:bg-red-hover active:bg-red-press"
         >
           <span className="truncate text-base font-semibold">{edit ? "Update order" : "Add to order"}</span>
           <span className="flex flex-col items-end leading-tight">
             <AnimatedNumber value={unitPrice * qty} format={formatTHB} className="tabular text-base font-bold" />
-            <span className="tabular text-xs font-medium text-white/80">
-              <AnimatedNumber value={macros.kcal} /> kcal{qty > 1 ? " each" : ""}
+            <span className="relative block h-4 overflow-hidden text-xs font-medium text-white/80">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={feedback ? feedback.id : "kcal"}
+                  role={feedback ? "status" : undefined}
+                  initial={{ y: 14, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -14, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn("tabular block whitespace-nowrap", feedback && "font-semibold text-white")}
+                >
+                  {feedback ? (
+                    feedback.text || feedback.price
+                  ) : (
+                    <>
+                      <AnimatedNumber value={macros.kcal} /> kcal{qty > 1 ? " each" : ""}
+                    </>
+                  )}
+                </motion.span>
+              </AnimatePresence>
             </span>
           </span>
         </button>
@@ -312,11 +292,6 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
             {footer}
           </div>
         </div>
-        <AddToCartFeedback
-          itemName={item.name}
-          isVisible={addedFeedback}
-          onDismiss={() => setAddedFeedback(false)}
-        />
       </>
     );
   }
@@ -338,11 +313,6 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
             {footer}
           </div>
         </div>
-        <AddToCartFeedback
-          itemName={item.name}
-          isVisible={addedFeedback}
-          onDismiss={() => setAddedFeedback(false)}
-        />
       </>
     );
   }
@@ -364,11 +334,6 @@ export function ProductConfigurator({ item, layout, edit, onClose, onDone, title
         </div>
         {footer}
       </div>
-      <AddToCartFeedback
-        itemName={item.name}
-        isVisible={addedFeedback}
-        onDismiss={() => setAddedFeedback(false)}
-      />
     </>
   );
 }

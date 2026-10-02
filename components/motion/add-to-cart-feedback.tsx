@@ -2,51 +2,51 @@
 
 import { Check } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useFly } from "@/lib/fly-store";
 
-type Props = {
-  itemName: string;
-  isVisible: boolean;
-  onDismiss: () => void;
-};
+const POP = { type: "spring", stiffness: 520, damping: 30, mass: 0.7 } as const;
 
-export function AddToCartFeedback({ itemName, isVisible, onDismiss }: Props) {
-  const [key, setKey] = useState(0);
+/** "Added" bubble shown after any add-to-order, above the tab bar. */
+export function AddToCartFeedback() {
+  const toast = useFly((s) => s.toast);
+  const dismiss = useFly((s) => s.dismiss);
   const reduce = useReducedMotion();
 
   useEffect(() => {
-    if (!isVisible) return;
-    setKey((k) => k + 1);
-    const timer = setTimeout(onDismiss, 2200);
+    if (!toast) return;
+    const timer = setTimeout(() => dismiss(toast.id), 2400);
     return () => clearTimeout(timer);
-  }, [isVisible, onDismiss]);
+  }, [toast, dismiss]);
 
   return (
-    <AnimatePresence>
-      {isVisible ? (
-        <motion.div
-          key={key}
-          initial={reduce ? { opacity: 0 } : { scale: 0.6, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={reduce ? { opacity: 0 } : { scale: 0.8, opacity: 0, y: -10 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.6 }}
-          className="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2"
-        >
-          <div className="flex items-center gap-3 rounded-full bg-surface-2 px-5 py-3 shadow-lg ring-1 ring-hairline-strong backdrop-blur-sm">
-            <motion.div
-              initial={reduce ? false : { scale: 0, rotate: -90 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 600, damping: 20, delay: 0.1 }}
-              className="flex size-6 items-center justify-center rounded-full bg-yellow"
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+12px)] z-[90] flex justify-center px-4 md:top-20 md:bottom-auto"
+    >
+      <AnimatePresence mode="popLayout">
+        {toast ? (
+          <motion.div
+            key={toast.id}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.96, transition: { duration: 0.18 } }}
+            transition={POP}
+            className="flex items-center gap-2.5 rounded-full bg-surface-3/90 py-2 pr-4 pl-2 shadow-[inset_0_1px_0_rgb(255_255_255/0.14),inset_0_0_0_1px_rgb(255_255_255/0.12),0_16px_40px_-12px_rgb(0_0_0/0.8)] backdrop-blur-2xl backdrop-saturate-150"
+          >
+            <motion.span
+              initial={reduce ? false : { scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ ...POP, delay: 0.08 }}
+              className="grid size-7 place-items-center rounded-full bg-white text-black"
             >
-              <Check className="size-4 stroke-[3] text-black" aria-hidden />
-            </motion.div>
-            <span className="text-sm font-semibold text-foreground">
-              {itemName} added
-            </span>
-          </div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+              <Check className="size-4" strokeWidth={3} aria-hidden />
+            </motion.span>
+            <span className="text-sm font-semibold whitespace-nowrap">{toast.text}</span>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   );
 }

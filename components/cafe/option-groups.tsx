@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { MenuItem, Option, OptionGroup, Selections } from "@/content/types";
 import { formatTHBDelta } from "@/lib/format";
 import { optionImpact } from "@/lib/nutrition";
+import { SelectGlow } from "@/components/motion/select-glow";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -41,12 +42,39 @@ function GroupHeader({ group, count }: { group: OptionGroup; count: number }) {
   );
 }
 
-const POP = { type: "spring", stiffness: 500, damping: 26 } as const;
+const POP = { type: "spring", stiffness: 560, damping: 28 } as const;
+
+function Indicator({ on, className }: { on: boolean; className?: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid shrink-0 place-items-center rounded-full transition-[background-color,box-shadow] duration-200",
+        on ? "bg-white text-black shadow-[0_0_14px_rgb(255_255_255/0.45)]" : "shadow-[inset_0_0_0_1.5px_rgb(255_255_255/0.28)]",
+        className,
+      )}
+    >
+      <AnimatePresence initial={false}>
+        {on ? (
+          <motion.span
+            key="check"
+            initial={reduce ? false : { scale: 0, rotate: -30 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={reduce ? undefined : { scale: 0, transition: { duration: 0.1 } }}
+            transition={POP}
+          >
+            <Check className="size-3" strokeWidth={3.5} />
+          </motion.span>
+        ) : null}
+      </AnimatePresence>
+    </span>
+  );
+}
 
 function SingleGroup({ item, group, selections, onToggle }: Props) {
-  const reduce = useReducedMotion();
   const current = selections[group.id]?.[0];
-  const cols = group.options.length === 2 ? "grid-cols-2" : group.options.length === 3 ? "grid-cols-3" : "grid-cols-2";
+  const cols = group.options.length === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
     <div role="radiogroup" aria-labelledby={`grp-${group.id}`} className={cn("grid gap-2", cols)}>
       {group.options.map((o) => {
@@ -54,23 +82,26 @@ function SingleGroup({ item, group, selections, onToggle }: Props) {
         const price = formatTHBDelta(o.priceDelta);
         const impact = on ? null : impactLabel(item, selections, group, o);
         return (
-          <motion.button
+          <button
             key={o.id}
             type="button"
             role="radio"
             aria-checked={on}
             onClick={() => onToggle(group.id, o.id)}
-            whileTap={reduce ? undefined : { scale: 0.96 }}
             className={cn(
-              "tap relative flex min-h-[60px] flex-col items-start justify-center rounded-2xl border px-3.5 py-2.5 text-left transition-colors duration-200",
-              on ? "border-white bg-white text-black" : "border-hairline-strong bg-surface-2 hover:border-white/30",
+              "tap relative isolate flex min-h-[64px] flex-col justify-center overflow-hidden rounded-2xl px-3.5 py-2.5 text-left",
+              on ? "glass-lit" : "glass hover:bg-white/[0.08]",
             )}
           >
-            <span className="text-[15px] leading-tight font-semibold">{o.label}</span>
-            <span className={cn("mt-0.5 text-xs leading-tight", on ? "text-black/60" : "text-text-tertiary")}>
-              {[o.detail, price].filter(Boolean).join("  ") || impact || " "}
+            <SelectGlow on={on} />
+            <span className="flex items-start justify-between gap-2">
+              <span className="text-[15px] leading-tight font-semibold">{o.label}</span>
+              <Indicator on={on} className="mt-px size-[18px]" />
             </span>
-          </motion.button>
+            <span className={cn("mt-1 text-xs leading-tight", on ? "text-white/75" : "text-text-tertiary")}>
+              {[o.detail, price].filter(Boolean).join(" · ") || impact || "\u00a0"}
+            </span>
+          </button>
         );
       })}
     </div>
@@ -78,64 +109,45 @@ function SingleGroup({ item, group, selections, onToggle }: Props) {
 }
 
 function MultiGroup({ item, group, selections, onToggle }: Props) {
-  const reduce = useReducedMotion();
   const current = selections[group.id] ?? [];
   const full = group.max !== undefined && current.length >= group.max;
   return (
-    <ul aria-labelledby={`grp-${group.id}`} className="overflow-hidden rounded-2xl bg-surface-2">
+    <ul aria-labelledby={`grp-${group.id}`} className="glass overflow-hidden rounded-2xl">
       {group.options.map((o, i) => {
         const on = current.includes(o.id);
         const disabled = !on && full;
         const impact = impactLabel(item, selections, group, o);
         return (
           <li key={o.id} className={cn(i > 0 && "border-t border-hairline")}>
-            <motion.button
+            <button
               type="button"
               role="checkbox"
               aria-checked={on}
               aria-disabled={disabled}
               onClick={() => !disabled && onToggle(group.id, o.id)}
-              whileTap={reduce || disabled ? undefined : { scale: 0.98 }}
               className={cn(
-                "flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-200",
-                disabled ? "cursor-not-allowed opacity-40" : "hover:bg-surface-3",
-                on && "bg-red-tint hover:bg-red-tint",
+                "tap relative isolate flex min-h-[60px] w-full items-center gap-3 overflow-hidden px-4 py-2.5 text-left",
+                disabled && "cursor-not-allowed opacity-40",
+                on ? "bg-white/[0.09]" : !disabled && "hover:bg-white/[0.05]",
               )}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full border transition-colors duration-200",
-                  on ? "border-red bg-red text-white" : "border-hairline-strong",
-                )}
-              >
-                <AnimatePresence initial={false}>
-                  {on ? (
-                    <motion.span
-                      key="check"
-                      initial={reduce ? false : { scale: 0, rotate: -45 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      exit={reduce ? undefined : { scale: 0, transition: { duration: 0.12 } }}
-                      transition={POP}
-                    >
-                      <Check className="size-3.5" strokeWidth={3} />
-                    </motion.span>
-                  ) : null}
-                </AnimatePresence>
-              </span>
+              <SelectGlow on={on} />
+              <Indicator on={on} className="size-6" />
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-medium">{o.label}</span>
                 {o.detail ? <span className="block text-xs text-text-tertiary">{o.detail}</span> : null}
               </span>
               <span className="shrink-0 text-right">
-                <span className="tabular block text-[15px] font-semibold">{formatTHBDelta(o.priceDelta)}</span>
+                <span className={cn("tabular block text-[15px] font-semibold", !on && "text-text-secondary")}>
+                  {formatTHBDelta(o.priceDelta)}
+                </span>
                 {impact ? (
                   <span className={cn("tabular block text-xs", impact.includes("protein") ? "text-red-text" : "text-text-tertiary")}>
                     {impact}
                   </span>
                 ) : null}
               </span>
-            </motion.button>
+            </button>
           </li>
         );
       })}
@@ -151,18 +163,18 @@ function RemoveGroup({ group, selections, onToggle }: Props) {
       {group.options.map((o) => {
         const on = current.includes(o.id);
         return (
-          <motion.button
+          <button
             key={o.id}
             type="button"
             role="checkbox"
             aria-checked={on}
             onClick={() => onToggle(group.id, o.id)}
-            whileTap={reduce ? undefined : { scale: 0.94 }}
             className={cn(
-              "tap flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors duration-200",
-              on ? "border-white bg-white text-black" : "border-hairline-strong text-text-secondary hover:text-white",
+              "tap relative isolate flex h-11 items-center gap-2 overflow-hidden rounded-full px-4 text-sm font-medium",
+              on ? "glass-lit" : "glass text-text-secondary hover:text-white",
             )}
           >
+            <SelectGlow on={on} />
             {on ? (
               <motion.span
                 aria-hidden
@@ -173,8 +185,8 @@ function RemoveGroup({ group, selections, onToggle }: Props) {
                 <X className="size-4" strokeWidth={2.5} />
               </motion.span>
             ) : null}
-            {o.label}
-          </motion.button>
+            <span className={cn(on && "line-through decoration-white/50")}>{o.label}</span>
+          </button>
         );
       })}
     </div>

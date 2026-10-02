@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/layout/site-header";
 import { TabBar } from "@/components/layout/tab-bar";
 import { FlyLayer } from "@/components/layout/fly-layer";
+import { AddToCartFeedback } from "@/components/motion/add-to-cart-feedback";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 
 export default function SiteLayout({
@@ -23,6 +24,7 @@ export default function SiteLayout({
       <CartDrawer />
       {sheet}
       <FlyLayer />
+      <AddToCartFeedback />
     </>
   );
 }

@@ -82,7 +82,7 @@ export function MenuView() {
       <header className="mx-auto max-w-7xl px-4 pt-6 pb-4 md:px-8 md:pt-12 md:pb-6">
         <h1 className="text-statement text-[64px] md:text-[104px]">Cafe</h1>
         <p className="mt-3 max-w-md text-[15px] text-text-secondary md:text-base">
-          Protein smoothies, cold-pressed juice and coffee. Every add-on shows its macros before you order.
+          Protein smoothies, coffee, food and kit. Every add-on shows its macros before you order.
         </p>
       </header>
 
@@ -99,7 +99,7 @@ export function MenuView() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search drinks or ingredients"
               aria-label="Search the menu"
-              className="h-11 w-full rounded-full border border-hairline bg-surface-2 pr-11 pl-11 text-base outline-none placeholder:text-text-tertiary focus-visible:border-white/60 [&::-webkit-search-cancel-button]:hidden"
+              className="glass h-11 w-full rounded-full pr-11 pl-11 text-base outline-none placeholder:text-text-tertiary focus-visible:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.6)] [&::-webkit-search-cancel-button]:hidden"
             />
             {query ? (
               <button
@@ -117,7 +117,6 @@ export function MenuView() {
             <ul className="no-scrollbar relative flex gap-2 overflow-x-auto px-4 py-2.5 md:px-0 md:py-0">
               {categories.map((c) => {
                 const on = !searching && active === c.id;
-                const categoryAccent = c.id === "smoothies" ? "yellow" : c.id === "coffee" ? "blue" : undefined;
                 return (
                   <li key={c.id}>
                     <button
@@ -128,12 +127,8 @@ export function MenuView() {
                       onClick={() => jump(c.id)}
                       aria-current={on ? "true" : undefined}
                       className={cn(
-                        "tap h-11 rounded-full px-5 text-[15px] font-semibold whitespace-nowrap transition-colors duration-200",
-                        on ? "bg-white text-black shadow-[0_4px_12px_rgb(0_0_0/0.3)]" : cn(
-                          "bg-surface-2 text-text-secondary hover:text-white",
-                          categoryAccent === "yellow" && "hover:bg-yellow-tint",
-                          categoryAccent === "blue" && "hover:bg-blue-tint",
-                        ),
+                        "tap h-11 rounded-full px-5 text-[15px] font-semibold whitespace-nowrap",
+                        on ? "bg-white text-black" : "glass text-text-secondary hover:text-white",
                       )}
                     >
                       {c.title}
@@ -185,7 +180,7 @@ export function MenuView() {
                     <p className="mt-1 text-sm text-text-secondary">{c.blurb}</p>
                   </div>
                   {items.length ? (
-                    <span className="tabular pb-1 text-sm text-text-tertiary">{items.length} drinks</span>
+                    <span className="tabular shrink-0 pb-1 text-sm whitespace-nowrap text-text-tertiary">{items.length} {items.length === 1 ? "item" : "items"}</span>
                   ) : null}
                 </div>
                 {items.length ? (

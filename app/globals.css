@@ -32,13 +32,15 @@
   --red-text: #ff4d6a; /* red used as text on dark surfaces (AA on #141414) */
   --red-tint: rgb(225 29 72 / 0.14);
 
-  /* premium accent system: electric baby blue + bright yellow */
-  --blue: #3b82f6; /* electric baby blue, energetic but not cyberpunk */
-  --blue-hover: #60a5fa;
-  --blue-tint: rgb(59 130 246 / 0.16);
-  --yellow: #fbbf24; /* bright sports/neon yellow, athletic energy */
-  --yellow-hover: #fcd34d;
-  --yellow-tint: rgb(251 191 36 / 0.16);
+  /* signals: small dots on tags only, never fills or buttons */
+  --signal-energy: #f5d04c;
+  --signal-recovery: #7cc4ff;
+
+  /* liquid glass */
+  --glass-fill: rgb(255 255 255 / 0.05);
+  --glass-fill-lit: rgb(255 255 255 / 0.12);
+  --glass-edge: rgb(255 255 255 / 0.09);
+  --glass-edge-lit: rgb(255 255 255 / 0.6);
 
   /* macro roles (always paired with a text label) */
   --macro-protein: var(--red);
@@ -92,12 +94,8 @@
   --color-red-press: var(--red-press);
   --color-red-text: var(--red-text);
   --color-red-tint: var(--red-tint);
-  --color-blue: var(--blue);
-  --color-blue-hover: var(--blue-hover);
-  --color-blue-tint: var(--blue-tint);
-  --color-yellow: var(--yellow);
-  --color-yellow-hover: var(--yellow-hover);
-  --color-yellow-tint: var(--yellow-tint);
+  --color-energy: var(--signal-energy);
+  --color-recovery: var(--signal-recovery);
   --color-protein: var(--macro-protein);
   --color-carbs: var(--macro-carbs);
   --color-fat: var(--macro-fat);
@@ -196,12 +194,31 @@
     padding-top: env(safe-area-inset-top);
   }
   .tap {
-    transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out),
-      opacity 160ms var(--ease-out), color 160ms var(--ease-out);
+    transition: transform 160ms var(--ease-out), background-color 220ms var(--ease-out),
+      box-shadow 220ms var(--ease-out), opacity 160ms var(--ease-out), color 160ms var(--ease-out);
   }
   .tap:active:not(:disabled) {
     transform: scale(0.96);
   }
+}
+
+/* Frosted surface: soft fill, top highlight, hairline edge drawn with inset shadow. */
+@utility glass {
+  background-color: var(--glass-fill);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 65%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px var(--glass-edge);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+/* The same surface, lit: brighter fill, white edge, faint halo. */
+@utility glass-lit {
+  background-color: var(--glass-fill-lit);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.08), transparent 65%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 0 0 1px var(--glass-edge-lit),
+    0 10px 30px -14px rgb(255 255 255 / 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {

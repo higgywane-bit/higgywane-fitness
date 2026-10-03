@@ -128,9 +128,9 @@ These are the rules. If a number on any screen disagrees with this list, the scr
 | **Expired / lapsed** | Had a gym plan; the latest one ended before today |
 | **No plan** | Never had a gym plan (may have PT only) |
 | **Visit** | An allowed check-in. A second scan within 2 minutes isn't a new visit. Turned-away scans are logged but never counted as visits |
-| **Sale** | A till receipt (Qashier), stored in satang, de-duplicated by receipt number. Voids/refunds are skipped on import |
+| **Sale** | Money taken. Rung up in Superfit (Till, desk passes, plan sales: `source = pos`) or imported from a Qashier CSV (history). Stored in satang, de-duplicated by `(source, external id)`. Voids/refunds are skipped on import |
 | **Sales category** | From item names: PT, membership, cafe, retail, other |
-| **Membership revenue** | Shown from Qashier (the till is the source of truth for money). Prices typed at the desk are a record, never added on top |
+| **Membership revenue** | From sales. Superfit is the till: every plan sold at the desk or Till writes one sale (free/`comp` and Glofox imports don't). The Qashier terminal is only the card machine, so **stop importing Qashier CSVs for periods rung up in Superfit**, or card sales count twice |
 | **PT balance** | Sessions in the pack − sessions logged; the pack expires on its end date |
 | **PT session** | One logged session against a pack, credited to a coach. A no-show still uses the session |
 | **Coach pay (est.)** | For each session: pack price ÷ sessions in the pack × the coach's commission % |
@@ -242,9 +242,11 @@ Who did it: every action runs inside `withActor(staffId)` (`lib/staff/context.ts
 
 Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's server code as-is, so plan the move as **keep the data and rules, rebuild the screens where it helps.**
 
+**Fastest start: the master pack.** `npm run pack` builds `pack/superfit-master-pack.zip`: the full app, a `core/` folder of every pure rule (drop it into the Lovable project's `src/`), the database as one `supabase/schema.sql`, and `LOVABLE_PROMPT.md`. It doesn't touch any other repo or Lovable project.
+
 **Keep exactly as-is**
 1. **The database.** Create a Supabase project (Singapore region), run the SQL files in `drizzle/` in order, then set `DATABASE_URL` here. This app and Lovable then share live data from day one, so you can switch screen by screen instead of all at once.
-2. **The rules** (pure TypeScript, no Next.js inside): `lib/membership/access.ts`, `dates.ts`, `codes.ts`, `reminders.ts`, `glofox.ts`; `lib/performance/metrics.ts`; `lib/expenses/rules.ts`; `lib/staff/rules.ts`; `lib/messages/segments.ts`; `lib/leads/constants.ts`; `lib/reports/analyze.ts`; `lib/dashboard/catalog.ts`; `lib/admin/analytics.ts`; `lib/csv.ts`; `lib/sales/qashier.ts`; `content/*`. Copy them into the Lovable project unchanged, together with `tests/unit/` so they stay correct.
+2. **The rules** (pure TypeScript, no Next.js inside): `lib/membership/access.ts`, `dates.ts`, `codes.ts`, `reminders.ts`, `glofox.ts`; `lib/performance/metrics.ts`; `lib/expenses/rules.ts`; `lib/staff/rules.ts`; `lib/messages/segments.ts`; `lib/leads/constants.ts`; `lib/reports/analyze.ts`; `lib/dashboard/catalog.ts`; `lib/admin/analytics.ts`; `lib/csv.ts`; `lib/sales/qashier.ts`; `lib/catalog/index.ts` + `validate.ts` (editable menu/plans/coaches); `lib/nutrition.ts`; `lib/pricing.ts`; `lib/pos/ticket.ts` (till maths); `content/*`. Copy them into the Lovable project unchanged, together with `tests/unit/` so they stay correct.
 3. **This document's definitions** (sections 3–4). Paste them into Lovable's knowledge/instructions so generated code uses the same meanings.
 
 **Rebuild in Lovable**

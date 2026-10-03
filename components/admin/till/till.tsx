@@ -21,7 +21,7 @@ import { getMenuItem, getPlan, menuCategories, menuItems } from "@/lib/catalog";
 import { formatTHB } from "@/lib/format";
 import { formatDate } from "@/lib/membership/dates";
 import { defaultSelections, itemGroups, itemMacros, itemPrice, roundMacros, scaleMacros, selectionSummary, sumMacros, toggleOption } from "@/lib/nutrition";
-import type { TillReceipt } from "@/lib/pos/service";
+import type { TillReceipt } from "@/lib/pos/ticket";
 import { cn } from "@/lib/utils";
 
 type Line =

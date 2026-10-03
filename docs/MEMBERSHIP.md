@@ -47,6 +47,33 @@ Left out on purpose: class timetables, online booking, automated billing, market
 
 ---
 
+### The scan result (what staff see)
+
+Full screen, gone in seconds, sound on by default:
+
+| Result | Colour | Shows | Sound |
+|---|---|---|---|
+| Active | Green | First name, days left, plan · end date | Tick |
+| Active, 3 days or fewer left | Green + yellow "Remind to renew" | Same, plus Renew now | Tick + "do-do-do-do" |
+| Already in today | Grey | Name | Soft tick |
+| Denied | Red | Name (or the unknown code) and why in 2–4 words: Expired 4 days ago, No active membership, Paused until…, Card not linked | Low buzz |
+
+Day passes and other plans of 3 days or less never trigger the renew reminder. Red stays 9 s (with Renew / Sell plan / Link to member / New member); green 3.5 s; tap anywhere to close.
+
+### Quick buttons on the check-in screen
+
+- **Day pass**: name, mobile, email → pay (card machine, QR or cash) → in. Already a member? It offers their record instead of a duplicate.
+- **1–2 week pass**: same, plus the code written on the paper card, which then scans them in all week.
+- **Link card**: scan the membership card (or type its 6-digit code), pick the member, done. A "Card not linked" scan jumps straight here.
+
+### The Till (`/admin/till`)
+
+One ticket for drinks, food, merch, memberships and PT. Scan a card to put it on the member's account (plans need a member). Pay on the Qashier card machine (key the amount, then confirm), PromptPay QR (shown for the exact amount; set the number in Site & content → Business) or cash (change worked out). Drinks and food land on the bar's Cafe orders board. Every sale is recorded in Superfit.
+
+### Site & content (`/admin/site`)
+
+Menu (prices, photos, recipes, add-ons, sold out), add-on groups, ingredients and macros, coach profiles and portraits, plans and prices, business details. Saving updates the website and the till straight away.
+
 ## 2. Member identity
 
 - **Access code:** 8 characters, no look-alike letters (no I, L, O, U), e.g. `K7M2 Q9PX`. It's what the QR holds and what staff type when there's no scanner.
@@ -94,11 +121,12 @@ Glofox has no open API for this (and charges for integrations), so the CSV expor
 
 ---
 
-## 5. Qashier (sales)
+## 5. Qashier (the card machine)
 
-- **Now:** export transactions from the Qashier back office as CSV and drop the file on Admin → Sales. Line-item exports are summed per receipt; voids/refunds are skipped; anything already imported is ignored. Sales are bucketed into memberships / PT / cafe / retail from the item names.
+- **Superfit is the till now.** Sales rung up in the Till, desk passes and plans sold in admin are recorded in Superfit as money. The Qashier terminal is only used to take the card; type its receipt number on the sale if you want to match them up.
+- **History:** export older transactions from the Qashier back office as CSV and drop the file on Admin → Sales. Line-item exports are summed per receipt; voids/refunds are skipped; anything already imported is ignored. Sales are bucketed into memberships / PT / cafe / retail from the item names.
 - **Later:** Qashier offers API access on request. When enabled, point its transaction webhook at `/api/qashier/webhook` (secret header `x-superfit-secret` = `QASHIER_WEBHOOK_SECRET`) and the dashboard fills itself. The adapter in that route needs fitting to Qashier's real payload once we have a sample.
-- Membership sales are recorded in the admin when sold (plan, price, Qashier receipt ref), and the Qashier figures stay the source of truth for revenue. They're shown side by side, never added together.
+- Don't import Qashier CSVs for days you rang up in Superfit: the card sales would count twice.
 
 ---
 

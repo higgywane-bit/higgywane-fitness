@@ -1,4 +1,17 @@
-import type { MemberListRow } from "@/lib/admin/queries";
+import type { MemberStatus } from "@/lib/membership/access";
+
+/** The member fields segments look at (a member list row satisfies this). */
+export type SegmentMember = {
+  name: string;
+  nickname: string | null;
+  archived: boolean;
+  tags: string[];
+  status: MemberStatus;
+  atRisk: boolean;
+  daysSinceExpiry?: number | null;
+  plan: string | null;
+  daysLeft?: number | null;
+};
 
 /*
  * Who a message goes to. Segments are computed from the same member standing the rest
@@ -17,7 +30,7 @@ export const SEGMENTS: { id: SegmentId; label: string; description: string }[] =
   { id: "everyone", label: "Everyone", description: "All members who allow messages" },
 ];
 
-export function inSegment(m: MemberListRow, seg: SegmentId): boolean {
+export function inSegment(m: SegmentMember, seg: SegmentId): boolean {
   if (m.archived) return false;
   if (seg.startsWith("tag:")) return m.tags.includes(seg.slice(4));
   switch (seg) {
@@ -43,7 +56,7 @@ export function segmentLabel(seg: SegmentId): string {
 }
 
 /** {firstName}, {plan}, {daysLeft} placeholders. */
-export function personalise(text: string, m: Pick<MemberListRow, "name" | "nickname" | "plan" | "daysLeft">): string {
+export function personalise(text: string, m: Pick<SegmentMember, "name" | "nickname" | "plan" | "daysLeft">): string {
   const first = m.nickname || m.name.split(" ")[0];
   return text
     .replace(/\{firstName\}/g, first)

@@ -11,6 +11,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { LeadStage } from "@/lib/leads/constants";
+
+export type { LeadStage };
 
 /*
  * Superfit members database (Postgres).
@@ -279,7 +282,6 @@ export const timeEntries = pgTable(
 
 /* ── Sales pipeline ───────────────────────────────────────── */
 
-export type LeadStage = "new" | "contacted" | "trial" | "won" | "lost";
 
 export const leads = pgTable(
   "leads",

@@ -1,4 +1,4 @@
-import type { LeadStage } from "@/lib/db/schema";
+export type LeadStage = "new" | "contacted" | "trial" | "won" | "lost";
 
 export const STAGES: { id: LeadStage; label: string }[] = [
   { id: "new", label: "New" },

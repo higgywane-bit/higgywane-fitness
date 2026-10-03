@@ -29,11 +29,15 @@ export function CafeBoard({ initial }: { initial: BoardOrder[] }) {
   const [pending, start] = useTransition();
   const known = useRef(new Set(initial.map((o) => o.id)));
 
+  // status changes still being saved: the poll must not paint over them
+  const inflight = useRef(0);
+
   useEffect(() => {
     const t = setInterval(async () => {
       setNow(Date.now());
+      if (inflight.current) return;
       const res = await cafeBoardAction();
-      if (!res.ok) return;
+      if (!res.ok || inflight.current) return;
       const fresh = res.data.filter((o) => o.status === "new" && !known.current.has(o.id));
       res.data.forEach((o) => known.current.add(o.id));
       if (fresh.length) chime();
@@ -42,11 +46,15 @@ export function CafeBoard({ initial }: { initial: BoardOrder[] }) {
     return () => clearInterval(t);
   }, []);
 
-  function move(o: BoardOrder, status: CafeOrderStatus) {
+  async function move(o: BoardOrder, status: CafeOrderStatus) {
     setOrders((xs) => xs.map((x) => (x.id === o.id ? { ...x, status } : x)));
-    start(async () => {
-      await setOrderStatusAction(o.id, status);
-    });
+    inflight.current++;
+    try {
+      const res = await setOrderStatusAction(o.id, status);
+      if (!res.ok) setOrders((xs) => xs.map((x) => (x.id === o.id ? { ...x, status: o.status } : x)));
+    } finally {
+      inflight.current--;
+    }
   }
 
   // the server only sends today's orders plus anything still open

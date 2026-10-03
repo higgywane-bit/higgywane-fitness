@@ -45,7 +45,14 @@ export function AdminDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-5", className)}>
+      <DialogContent
+        className={cn(
+          "max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto overscroll-contain p-5",
+          // phones: a bottom sheet (no centring transform), thumb-friendly and reliable to scroll
+          "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] max-sm:data-[state=open]:animate-[sheet-up_260ms_var(--ease-out)]",
+          className,
+        )}
+      >
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>

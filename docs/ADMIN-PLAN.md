@@ -42,12 +42,22 @@ Three ideas hold it together:
 | **Sales** | Built (CSV) | Till totals, by type, recent receipts; Qashier CSV import with receipt de-dupe | Qashier |
 | **Insights** | Built | Upload any Glofox report; it's read automatically with adjustable charts. Kept out of the live dashboard | Glofox CSV |
 | **Reminders** | Built (log only) | Renewal emails 7 days / last day / 3 days lapsed; sends once Resend is set | Superfit |
-| **Settings** | Built | Connections status, reminders queue, desk rules, hardware tips, demo data | — |
+| **Cafe orders** | Built | Website orders on a live board for the bar (new → preparing → ready → collected) with a chime; customers see progress on their order page | Website |
+| **Leads** | Built | Enquiry pipeline (new → contacted → trial → joined / lost), follow-up dates, notes, convert to member; website PT requests and coach messages arrive automatically | Superfit + Website |
+| **Coaching** | Built | PT booking inbox from the website, sessions logged against a coach (or no-show), coach leaderboard with commission, active packs | Superfit + Website |
+| **Messages** | Built (preview until email is connected) | Email a segment (active, expiring, at risk, lapsed, never bought, tag) with templates and {firstName}/{plan}/{daysLeft} | Superfit |
+| **Performance** | Built | Period picker; targets; sales, costs, profit, margin; profit and loss by month; member flow (joined, came back, left); churn; renewal rate; cohort retention; visits; coaches; cafe | Superfit + Qashier |
+| **Expenses** | Built | Costs ledger by month with monthly recurring costs (rent, wages, software) | Superfit |
+| **Staff** | Built | Team list and profiles (role, PIN, hourly rate, PT commission), hours and pay estimate, what each person did | Superfit |
+| **Rota & hours** | Built | Weekly rota by person and area, copy last week, planned vs clocked hours, wage estimate | Superfit |
+| **Who's working** | Built | Each device picks the staff member on shift (PIN if set) and clocks them in and out; every action is logged under their name | Superfit |
+| **Activity log** | Built | Everything that happened in the last 30 days, filter by type and by staff member | Superfit |
+| **Exports** | Built | CSV of members, check-ins, sales, leads, expenses, timesheets, PT sessions | Superfit |
+| **Settings** | Built | Connections status, reminders queue, desk rules, hardware tips, exports, team access, demo data | — |
 | Qashier live feed | Ready to connect | Webhook endpoint waiting for Qashier API access | Qashier API |
-| Staff logins & roles | Next | Owner / manager / front desk; who did what in the activity log | Supabase Auth |
+| Staff logins & roles | Next | Real sign-in replacing the "who's working" picker; role permissions (roles already stored on each staff member) | Supabase Auth |
 | Member accounts | Next | Members sign in on the website and see their pass, history, PT balance | Supabase Auth |
 | Online renewals | Later | Pay by PromptPay/card from the pass page | Opn / 2C2P |
-| Cafe orders in admin | Later | Website cafe orders saved and shown to staff (and on the dashboard) | Website |
 | LINE notifications | Later | Reminders and PT confirmations by LINE | LINE OA |
 | Wallet passes, door access | Later | Apple/Google Wallet pass; turnstile using the same check-in rule | — |
 
@@ -85,6 +95,18 @@ The dashboard is a list of module ids, saved in `app_settings` under `dashboard.
 | `top-visitors` | List | Most allowed check-ins in the last 30 days |
 | `birthdays` | List | Birthdays in the next 7 days |
 | `recent-sales` | List | Last 8 receipts |
+| `kpi-profit-month` | Profit this month | Month-to-date sales − month-to-date costs (monthly costs counted on their day) |
+| `kpi-costs-month` | Costs this month | Month-to-date expenses, vs the same days last month |
+| `targets` | Progress bars | This month vs the owner's targets (sales, new members, active members, PT sessions) |
+| `profit-monthly` | Bar chart, 12 months | Sales − costs per calendar month; losing months shown empty and counted |
+| `kpi-renewal-rate` | % renewed | Plans (a week or longer) that ended 14–104 days ago and were followed by another plan within 14 days |
+| `kpi-churn` | Members lost this month | Active on the 1st, not active today |
+| `at-risk` | List | Active members with no visit in 14+ days (or never, if joined 14+ days ago) |
+| `kpi-open-leads` | Open leads (+ follow-ups due) | Leads not joined or lost; follow-up date today or earlier |
+| `follow-ups` | List | Open leads with a follow-up due |
+| `kpi-cafe-orders` | Orders today (+ waiting) | Website cafe orders today, not cancelled; waiting = new or preparing |
+| `kpi-pt-month` | PT sessions this month | Sessions marked done this month; plus booking requests waiting |
+| `on-shift` | List | Staff on today's rota or clocked in today, with hours so far |
 
 **Adding a module** (about 15 minutes): add an entry to `WIDGETS` in `catalog.ts` → a loader in `LOADERS` (`data.ts`) → a renderer in `RENDERERS` (`widgets.tsx`). TypeScript refuses to build until all three exist, and `tests/unit/dashboard.test.ts` runs every loader against demo data.
 
@@ -110,6 +132,18 @@ These are the rules. If a number on any screen disagrees with this list, the scr
 | **Sales category** | From item names: PT, membership, cafe, retail, other |
 | **Membership revenue** | Shown from Qashier (the till is the source of truth for money). Prices typed at the desk are a record, never added on top |
 | **PT balance** | Sessions in the pack − sessions logged; the pack expires on its end date |
+| **PT session** | One logged session against a pack, credited to a coach. A no-show still uses the session |
+| **Coach pay (est.)** | For each session: pack price ÷ sessions in the pack × the coach's commission % |
+| **At risk** | Active, but no visit in 14+ days (`AT_RISK_DAYS`) |
+| **Joined / came back / left** | Over a period: joined = first-ever gym plan started; came back = had a plan before, inactive at the start, active at the end; left (churned) = active the day before the period, not active on its last day |
+| **Churn rate** | Left ÷ active at the start. Retention = 1 − churn |
+| **Renewal rate** | Of plans a week or longer that ended in the period (and whose 14-day grace has passed), the share followed by another plan starting within 14 days of the end, or earlier |
+| **Cohort retention** | Members grouped by the month of their first plan; share with an active plan at the end of month 1, 2, 3… |
+| **Costs** | Expenses; a monthly expense repeats on the same day each month until its end date |
+| **Profit** | Sales (Qashier) − costs, per calendar month or period. Margin = profit ÷ sales |
+| **Revenue per member** | Sales in the period ÷ average active members (sampled weekly) |
+| **Hours worked** | Clock-in to clock-out; an open entry counts up to now. Wages (est.) = hours × hourly rate |
+| **Lead conversion** | Leads created in the last 30 days that reached "joined" |
 
 The code for these: `lib/membership/access.ts` (member states), `lib/admin/analytics.ts` (time buckets, comparisons), `lib/dashboard/data.ts` (each figure).
 
@@ -147,8 +181,19 @@ Postgres, defined in `lib/db/schema.ts`, SQL migrations in `drizzle/` (plain SQL
 | `sales` | Till receipts | `source` + `external_id` (unique), `occurred_at`, `amount_satang`, `category`, `items` (jsonb: name, qty, amountSatang), `member_id` |
 | `report_uploads` | Insights files | `kind`, `name`, `headers`, `rows` (jsonb, as uploaded), `row_count`, `date_from/to` |
 | `app_settings` | Shared preferences | `key` → `value` jsonb (e.g. `dashboard.layout`) |
-| `activity` | Member timeline | `member_id`, `type`, `message`, `at` |
+| `activity` | Timeline + audit log | `member_id`, `lead_id`, `staff_id`, `type`, `message`, `at` |
 | `reminders` | Emails sent | unique (`member_id`, `ends_on`, `kind`) so each sends once |
+| `staff` | Team | `name`, `role` (owner / manager / desk / coach / cafe), `pin_hash`, `coach_slug` (links to the website profile), `hourly_rate`, `pt_commission_pct`, `active` |
+| `shifts` | Rota | `staff_id`, `date`, `start`, `end` (HH:MM), `area` (desk / cafe / floor / pt / cleaning) |
+| `time_entries` | Clock in / out | `staff_id`, `clock_in`, `clock_out` (null while clocked in) |
+| `leads` | Enquiries | name, contact, `source`, `interest`, `stage`, `owner_id`, `next_follow_up`, `lost_reason`, `member_id` once joined |
+| `pt_sessions` | PT delivered | `member_id`, `membership_id` (the pack), `coach_id`, `at`, `status` (done / no-show) |
+| `pt_bookings` | Website PT requests | coach, package, date, time, contact, `status` (requested / confirmed / declined / done), `lead_id` |
+| `cafe_orders` | Website cafe orders | `number`, `status`, customer, service, `lines` (jsonb), `subtotal` (฿), macros, payment method/status |
+| `expenses` | Costs | `date`, `category`, `description`, `amount_satang`, `recurring` (none / monthly), `ends_on` |
+| `messages` | Sent emails | audience segment, subject, body, recipients, sent, status (sent / preview), `staff_id` |
+
+`activity` also records `staff_id` (who did it) and `lead_id`. Members carry `tags` (text array). Rows created as demo data carry `demo = true` (or belong to demo staff/members) and are removed by Settings → Remove demo data.
 
 Plans and prices are not in the database: they come from `content/pricing.json` (the owner's list) plus durations in `content/plans.ts`. Each sale records the plan name and price paid, so changing prices never rewrites history.
 
@@ -181,6 +226,15 @@ All writes go through these server actions in `app/admin/actions.ts`. Each is a 
 | Upload / retype / delete report | `saveReport()` `updateReport()` `deleteReport()` · `lib/reports/service.ts` |
 | Save dashboard layout | `saveLayout()` · `lib/dashboard/layout.ts` |
 | Send reminders | `sendReminders()` · `lib/membership/reminder-service.ts` |
+| Tags, notes, message a segment | `setMemberTags()` `addMemberNote()` `sendMessage()` · `lib/messages/service.ts` |
+| Leads | `createLead()` `updateLead()` `setLeadStage()` `addLeadNote()` `convertLead()` · `lib/leads/service.ts` |
+| PT requests, log session | `saveBookingRequest()` `setBookingStatus()` · `lib/coaching/service.ts`; `useSession(…, { coachId, status })` |
+| Cafe orders | `saveWebOrder()` `setOrderStatus()` `markOrderPaid()` · `lib/cafe/orders.ts` |
+| Staff, rota, time clock | `createStaff()` `updateStaff()` `verifyPin()` `addShift()` `copyWeek()` `clockIn()` `clockOut()` · `lib/staff/service.ts` |
+| Expenses, targets | `addExpense()` `endRecurring()` · `lib/expenses/service.ts`; `saveTargets()` · `lib/performance/targets.ts` |
+| CSV exports | `GET /admin/export/{members,check-ins,sales,leads,expenses,timesheets,pt-sessions}` |
+
+Who did it: every action runs inside `withActor(staffId)` (`lib/staff/context.ts`), and `logActivity()` stamps that staff id. With real logins, pass the signed-in staff id instead of the device cookie.
 
 ---
 
@@ -190,7 +244,7 @@ Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's ser
 
 **Keep exactly as-is**
 1. **The database.** Create a Supabase project (Singapore region), run the SQL files in `drizzle/` in order, then set `DATABASE_URL` here. This app and Lovable then share live data from day one, so you can switch screen by screen instead of all at once.
-2. **The rules** (pure TypeScript, no Next.js inside): `lib/membership/access.ts`, `dates.ts`, `codes.ts`, `reminders.ts`, `glofox.ts`; `lib/reports/analyze.ts`; `lib/dashboard/catalog.ts`; `lib/admin/analytics.ts`; `lib/csv.ts`; `lib/sales/qashier.ts`; `content/*`. Copy them into the Lovable project unchanged, together with `tests/unit/` so they stay correct.
+2. **The rules** (pure TypeScript, no Next.js inside): `lib/membership/access.ts`, `dates.ts`, `codes.ts`, `reminders.ts`, `glofox.ts`; `lib/performance/metrics.ts`; `lib/expenses/rules.ts`; `lib/staff/rules.ts`; `lib/messages/segments.ts`; `lib/leads/constants.ts`; `lib/reports/analyze.ts`; `lib/dashboard/catalog.ts`; `lib/admin/analytics.ts`; `lib/csv.ts`; `lib/sales/qashier.ts`; `content/*`. Copy them into the Lovable project unchanged, together with `tests/unit/` so they stay correct.
 3. **This document's definitions** (sections 3–4). Paste them into Lovable's knowledge/instructions so generated code uses the same meanings.
 
 **Rebuild in Lovable**
@@ -207,9 +261,12 @@ Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's ser
 - Qashier is the source of truth for money; desk prices are a record, never added on top.
 - Sales de-dupe on (source, receipt number); reminders on (member, end date, kind).
 - All dates are Bangkok calendar days.
+- Every staff action is logged with who did it.
+- A lead with the same phone or email as an open lead is the same person (no duplicates).
+- Monthly costs repeat until their end date; profit uses Qashier sales minus costs.
 
 **Prompt starter for Lovable**
-> Build the Superfit admin on the existing Supabase schema (tables: members, credentials, memberships, check_ins, sales, report_uploads, app_settings, activity, reminders). Import the TypeScript modules in /core unchanged and use them for every membership status, days-left and dashboard figure: never recompute these in components. Follow docs/ADMIN-PLAN.md sections 3–4 for definitions and docs/MEMBERSHIP.md for desk workflows. Dark, black and white with one red accent (#E11D48), condensed heavy display type, mobile first.
+> Build the Superfit admin on the existing Supabase schema (tables: members, credentials, memberships, check_ins, sales, report_uploads, app_settings, activity, reminders, staff, shifts, time_entries, leads, pt_sessions, pt_bookings, cafe_orders, expenses, messages). Import the TypeScript modules in /core unchanged and use them for every membership status, days-left and dashboard figure: never recompute these in components. Follow docs/ADMIN-PLAN.md sections 3–4 for definitions and docs/MEMBERSHIP.md for desk workflows. Dark, black and white with one red accent (#E11D48), condensed heavy display type, mobile first.
 
 ---
 
@@ -222,11 +279,13 @@ Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's ser
 - [ ] Confirm the scanner reads phone QR codes (or buy a 2D imager)
 - [ ] Switch-over day: re-import, start checking in on Superfit, send passes
 - [ ] Upload Glofox transaction and attendance history into Insights
+- [ ] Enter fixed monthly costs (rent, wages, software) in Expenses and set targets on Performance
 
 **Phase 2: connect**
 - [ ] Qashier API access → webhook live, CSV imports stop
 - [ ] Resend + sending domain → reminder emails on
-- [ ] Staff logins (Supabase Auth), roles, staff name on each activity
+- [ ] Add the real team in Staff (PINs, hourly rates, coach commission), build the first rota
+- [ ] Staff logins (Supabase Auth) replacing the device picker; enforce role permissions
 - [ ] Cancel Glofox
 
 **Phase 3: members**
@@ -236,9 +295,10 @@ Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's ser
 - [ ] LINE reminders
 
 **Phase 4: grow**
-- [ ] Cafe orders saved and shown in admin; cafe modules on the dashboard
-- [ ] Retention modules (churn by plan, first-90-days drop-off)
-- [ ] Coach / PT schedule and per-coach PT stats
+- [ ] PT calendar (coach availability, sessions booked into slots, reminders to clients)
+- [ ] Cafe stock and recipe costs (margin per drink), linked to Expenses
+- [ ] Churn by plan and first-90-days drop-off modules
+- [ ] Payroll export in the accountant's format
 - [ ] Thai language
 
 ---

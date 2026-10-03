@@ -144,8 +144,9 @@ export async function seedDemo(db: DB, now = new Date()) {
     const growth = 1 - day / 900;
     const n = Math.round(growth * 18) + Math.floor(r() * 22) + (new Date(`${date}T00:00:00Z`).getUTCDay() % 6 === 0 ? 10 : 0);
     // older history: membership and PT sales at the till (recent ones come from the demo members below)
-    if (day >= 60) {
-      for (let k = 0; k < 1 + Math.floor(r() * 3); k++) {
+    {
+      // fewer in the last 60 days, where the demo members' own purchases add the rest
+      for (let k = 0; k < (day >= 60 ? 1 + Math.floor(r() * 3) : Math.floor(r() * 2.2)); k++) {
         const plan = pick(PLANS.filter((p) => p.id !== "12-months" || r() > 0.7));
         till.push({
           source: "demo",

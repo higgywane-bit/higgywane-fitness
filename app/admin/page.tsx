@@ -92,7 +92,7 @@ export default async function DashboardPage() {
       </PageHeader>
 
       {layout.items.length ? (
-        <div className="grid grid-cols-2 gap-3 px-4 md:gap-4 md:px-8 xl:grid-cols-4">
+        <div className="grid grid-flow-row-dense grid-cols-2 gap-3 px-4 md:gap-4 md:px-8 xl:grid-cols-4">
           {layout.items.map((item) => (
             <Widget key={item.id} item={item} ctx={ctx} />
           ))}

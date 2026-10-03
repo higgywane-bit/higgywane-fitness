@@ -1,6 +1,7 @@
 import { coaches } from "@/content/coaches";
 import { menu } from "@/content/menu";
 import { addDays, addMonths, localDate } from "@/lib/membership/dates";
+import { setSetting } from "@/lib/settings";
 import { hashPin } from "@/lib/staff/service";
 import type { DB } from "./client";
 import { cafeOrders, expenses, leads, messages, ptBookings, ptSessions, shifts, staff, timeEntries, type MembershipRow } from "./schema";
@@ -222,5 +223,6 @@ export async function seedExtra(db: DB, r: R, now: Date, memberIds: string[], ms
     createdAt: new Date(now.getTime() - 6 * 86_400_000),
   });
 
+  await setSetting(db, "targets", { revenue: 320_000, newMembers: 15, activeMembers: 45, ptSessions: 40 });
   void memberIds;
 }

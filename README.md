@@ -16,11 +16,19 @@ Optional env:
 
 - `NEXT_PUBLIC_ADOBE_FONTS_KIT`: Adobe Fonts kit ID. When set, display/body switch to Avenir Next LT Pro; otherwise Barlow Condensed + Inter.
 
-## Admin (members, check-in, sales)
+## Admin (`/admin`)
 
-`/admin` is the Superfit membership system that replaces Glofox: front-desk check-in (USB scanner, iPad camera, typed code), members, plans, Glofox import, Qashier sales and renewal reminders. Members get a QR pass at `/pass/<secret>`. Also a modular dashboard (modules on/off, presets) and Insights for uploaded Glofox reports. Design and rollout: `docs/MEMBERSHIP.md`; full blueprint, metric definitions and Lovable handoff: `docs/ADMIN-PLAN.md`.
+The Superfit back office that replaces Glofox:
 
-Locally it runs on PGlite (Postgres in `.data/`, demo members preloaded). For production set `DATABASE_URL` and run `npm run db:migrate`. After changing `lib/db/schema.ts`, run `npm run db:generate`. See `.env.example` for all settings.
+- **Today:** dashboard (modules you switch on/off), front-desk check-in (USB scanner, iPad camera, typed code), live cafe order board
+- **People:** members (status, at-risk, tags, notes, passes), leads pipeline, coaching (PT requests, sessions by coach), messages to segments
+- **Business:** performance (profit and loss, churn, renewals, cohorts, targets), Qashier sales, expenses, Insights for uploaded Glofox reports
+- **Team:** staff, PIN "who's working" with clock in/out, rota and hours
+- **System:** activity log (who did what), settings, CSV exports
+
+Members get a QR pass at `/pass/<secret>`. Design and rollout: `docs/MEMBERSHIP.md`. Full blueprint, metric definitions and Lovable handoff: `docs/ADMIN-PLAN.md`.
+
+Locally it runs on PGlite (Postgres in `.data/`) preloaded with demo data for every screen (demo Owner PIN: 1234; remove it all from Settings). For production set `DATABASE_URL` and run `npm run db:migrate`. After changing `lib/db/schema.ts`, run `npm run db:generate`. See `.env.example` for all settings.
 
 ## Where things live
 

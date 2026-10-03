@@ -146,6 +146,8 @@ export const sales = pgTable(
     paymentMethod: text("payment_method"),
     memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
     items: jsonb("items").$type<{ name: string; qty: number; amountSatang: number }[]>(),
+    /** who rang it up at the Superfit till (POS sales) */
+    staffId: uuid("staff_id"),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("sales_external_idx").on(t.source, t.externalId), index("sales_at_idx").on(t.occurredAt)],
@@ -363,6 +365,8 @@ export const cafeOrders = pgTable(
     number: text("number").notNull(),
     status: text("status").$type<CafeOrderStatus>().notNull().default("new"),
     customerName: text("customer_name").notNull(),
+    /** web (customer ordered online) | pos (rung up at the till) */
+    channel: text("channel").notNull().default("web"),
     contact: text("contact"),
     /** takeaway | dine-in */
     serviceMode: text("service_mode").notNull(),
@@ -444,3 +448,18 @@ export type PtBooking = typeof ptBookings.$inferSelect;
 export type CafeOrderRow = typeof cafeOrders.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
+
+/* ── Media ────────────────────────────────────────────────── */
+
+/** Photos uploaded in admin (menu items, coaches). Resized in the browser first; served from /media/<id>. */
+export const media = pgTable("media", {
+  id: id(),
+  contentType: text("content_type").notNull(),
+  /** base64; images are small (≤1600 px WebP) */
+  data: text("data").notNull(),
+  bytes: integer("bytes").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  alt: text("alt"),
+  createdAt: createdAt(),
+});

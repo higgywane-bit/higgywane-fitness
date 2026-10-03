@@ -39,6 +39,20 @@ import {
 import { setActingStaff } from "@/lib/staff/session";
 import { addExpense, deleteExpense, endRecurring, type ExpenseInput } from "@/lib/expenses/service";
 import { saveTargets, type Targets } from "@/lib/performance/targets";
+import type { CatalogSection } from "@/lib/catalog";
+import { resetCatalogSection, saveCatalogSection } from "@/lib/catalog/server";
+import { saveImage } from "@/lib/media/service";
+import { logActivity } from "@/lib/membership/service";
+
+const CATALOG_LABELS: Record<CatalogSection, string> = {
+  categories: "menu categories",
+  menu: "menu",
+  optionGroups: "add-ons",
+  ingredients: "ingredients",
+  coaches: "coaches",
+  plans: "plans & prices",
+  business: "business details",
+};
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -365,4 +379,28 @@ export async function endRecurringAction(id: string, endsOn: string) {
 
 export async function saveTargetsAction(targets: Targets) {
   return run(async () => saveTargets(await getDb(), targets));
+}
+
+/* ── Site & content (catalog) ─────────────────────────────── */
+
+export async function saveCatalogAction(section: CatalogSection, value: unknown) {
+  return run(async () => {
+    const saved = await saveCatalogSection(await getDb(), section, value);
+    await logActivity(await getDb(), null, "content.saved", `Site content updated: ${CATALOG_LABELS[section]}`);
+    revalidatePath("/", "layout");
+    return saved;
+  });
+}
+
+export async function resetCatalogAction(section: CatalogSection) {
+  return run(async () => {
+    await resetCatalogSection(await getDb(), section);
+    await logActivity(await getDb(), null, "content.reset", `Site content reset to defaults: ${CATALOG_LABELS[section]}`);
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function uploadImageAction(input: { dataUrl: string; width?: number; height?: number; alt?: string }) {
+  if (input.dataUrl.length > 3_000_000) return { ok: false as const, error: "That photo is too big (2 MB max)." };
+  return run(async () => saveImage(await getDb(), input), false);
 }

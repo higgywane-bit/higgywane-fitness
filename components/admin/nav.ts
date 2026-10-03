@@ -7,6 +7,7 @@ import {
   History,
   LayoutDashboard,
   Mail,
+  MonitorSmartphone,
   ReceiptText,
   ScanLine,
   Settings2,
@@ -53,6 +54,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/staff", label: "Staff", icon: IdCard },
       { href: "/admin/staff/rota", label: "Rota & hours", icon: CalendarClock },
     ],
+  },
+  {
+    label: "Website",
+    items: [{ href: "/admin/site", label: "Site & content", short: "Site", icon: MonitorSmartphone }],
   },
   {
     label: "System",

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { CalendarCheck, MessageCircle } from "lucide-react";
 import { motion, type MotionValue } from "motion/react";
 import type { Coach } from "@/content/types";
@@ -10,7 +11,7 @@ import { cn } from "@/lib/utils";
 // Where the red light sits on each coach's card, so the four feel related but distinct.
 const LIGHT = ["12% 108%", "92% 104%", "8% 0%", "96% 6%"];
 
-/** Typographic "portrait": no photo, just light, type and glass. Fills its positioned parent. */
+/** The coach's portrait (uploaded in admin), or a typographic one: light, type and glass. Fills its positioned parent. */
 export function CoachBackdrop({
   coach,
   index,
@@ -29,9 +30,20 @@ export function CoachBackdrop({
         className="absolute inset-0"
         style={{ backgroundImage: `radial-gradient(75% 55% at ${light}, rgb(225 29 72 / 0.32), transparent 70%)` }}
       />
+      {coach.photo ? (
+        <Image
+          src={coach.photo}
+          alt=""
+          fill
+          sizes={variant === "hero" ? "100vw" : variant === "mini" ? "200px" : "(min-width: 768px) 420px, 80vw"}
+          className="object-cover object-top"
+          priority={variant === "hero"}
+        />
+      ) : null}
       <span
         className={cn(
           "text-statement absolute leading-none text-transparent select-none [-webkit-text-stroke:1.5px_rgb(255_255_255/0.14)]",
+          coach.photo && "hidden",
           variant === "card" && "-top-[6%] -right-[14%] text-[420px]",
           variant === "mini" && "-top-[10%] -right-[18%] text-[220px]",
           variant === "hero" && "-top-[4%] -right-[10%] text-[min(150vw,860px)] md:right-[2%]",
@@ -48,6 +60,7 @@ export function CoachBackdrop({
         />
       ) : null}
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+      {coach.photo ? <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" /> : null}
       <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgb(255_255_255/0.12),inset_0_0_0_1px_rgb(255_255_255/0.08)]" />
     </div>
   );

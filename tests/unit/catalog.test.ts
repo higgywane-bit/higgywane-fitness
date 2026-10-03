@@ -79,3 +79,16 @@ describe("catalog edits", () => {
     setCatalog(DEFAULT_CATALOG);
   });
 });
+
+describe("media", () => {
+  it("stores small images and rejects anything else", async () => {
+    const { saveImage, loadImage } = await import("@/lib/media/service");
+    const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const path = await saveImage(db, { dataUrl: `data:image/png;base64,${png}`, width: 1, height: 1 });
+    expect(path).toMatch(/^\/media\/[0-9a-f-]{36}$/);
+    const row = await loadImage(db, path.split("/").pop()!);
+    expect(row).toMatchObject({ contentType: "image/png", width: 1 });
+    await expect(saveImage(db, { dataUrl: "data:text/html;base64,PGgxPg==" })).rejects.toThrow(/JPG, PNG or WebP/);
+    expect(await loadImage(db, "../etc/passwd")).toBeNull();
+  });
+});

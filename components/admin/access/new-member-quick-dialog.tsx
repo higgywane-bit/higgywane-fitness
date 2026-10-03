@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { AlertCircle, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { memberships } from "@/lib/pricing";
 import { createMemberAction } from "@/app/admin/actions";
@@ -86,10 +86,9 @@ export function NewMemberQuickDialog({ open, onOpenChange, onCreated }: NewMembe
 
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
           <div>
-            <label className="block text-sm font-medium text-white mb-1.5">
-              Name *
-            </label>
+            <Label htmlFor="name">Name *</Label>
             <Input
+              id="name"
               placeholder="Member name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -100,10 +99,9 @@ export function NewMemberQuickDialog({ open, onOpenChange, onCreated }: NewMembe
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white mb-1.5">
-              Phone
-            </label>
+            <Label htmlFor="phone">Phone</Label>
             <Input
+              id="phone"
               placeholder="Phone number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -114,10 +112,9 @@ export function NewMemberQuickDialog({ open, onOpenChange, onCreated }: NewMembe
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white mb-1.5">
-              Email
-            </label>
+            <Label htmlFor="email">Email</Label>
             <Input
+              id="email"
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -128,9 +125,7 @@ export function NewMemberQuickDialog({ open, onOpenChange, onCreated }: NewMembe
           </div>
 
           <div>
-            <label htmlFor="plan" className="block text-sm font-medium text-white mb-1.5">
-              Plan *
-            </label>
+            <Label htmlFor="plan">Plan *</Label>
             <select
               id="plan"
               value={planId}

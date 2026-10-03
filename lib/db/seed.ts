@@ -3,7 +3,9 @@ import { planEndDate } from "@/lib/membership/access";
 import { generateAccessCode, generatePassToken } from "@/lib/membership/codes";
 import { addDays, localDate } from "@/lib/membership/dates";
 import type { DB } from "./client";
+import { eq } from "drizzle-orm";
 import { activity, checkIns, credentials, members, memberships, sales } from "./schema";
+import { seedExtra } from "./seed-extra";
 
 /*
  * Demo data for local development: believable members in every state (active,
@@ -141,6 +143,23 @@ export async function seedDemo(db: DB, now = new Date()) {
     // the cafe has grown: fewer sales further back
     const growth = 1 - day / 900;
     const n = Math.round(growth * 18) + Math.floor(r() * 22) + (new Date(`${date}T00:00:00Z`).getUTCDay() % 6 === 0 ? 10 : 0);
+    // older history: membership and PT sales at the till (recent ones come from the demo members below)
+    {
+      // fewer in the last 60 days, where the demo members' own purchases add the rest
+      for (let k = 0; k < (day >= 60 ? 1 + Math.floor(r() * 3) : Math.floor(r() * 2.2)); k++) {
+        const plan = pick(PLANS.filter((p) => p.id !== "12-months" || r() > 0.7));
+        till.push({
+          source: "demo",
+          externalId: `R${receipt++}`,
+          occurredAt: new Date(`${date}T${String(8 + Math.floor(r() * 11)).padStart(2, "0")}:15:00+07:00`),
+          amountSatang: plan.price * 100,
+          category: plan.kind === "pt" ? "pt" : "membership",
+          description: plan.name,
+          paymentMethod: "Card",
+          items: [{ name: plan.name, qty: 1, amountSatang: plan.price * 100 }],
+        });
+      }
+    }
     for (let k = 0; k < n; k++) {
       const hour = 6 + Math.floor(r() * 15);
       const at = new Date(`${date}T${String(hour).padStart(2, "0")}:${String(Math.floor(r() * 60)).padStart(2, "0")}:00+07:00`);
@@ -180,4 +199,11 @@ export async function seedDemo(db: DB, now = new Date()) {
   for (let i = 0; i < till.length; i += 500) await db.insert(sales).values(till.slice(i, i + 500));
 
   await db.insert(activity).values(inserted.map((m, i) => ({ memberId: m.id, type: "member.created", message: "Member created", at: people[i].createdAt })));
+
+  // tags on a few members, so segments and filters have something to show
+  const tagSets = [["student"], ["vip"], ["competitor"], ["student", "morning"], ["staff"]];
+  for (let i = 0; i < inserted.length; i += 4) {
+    await db.update(members).set({ tags: tagSets[(i / 4) % tagSets.length] }).where(eq(members.id, inserted[i].id));
+  }
+  await seedExtra(db, r, now, inserted.map((m) => m.id), ms);
 }

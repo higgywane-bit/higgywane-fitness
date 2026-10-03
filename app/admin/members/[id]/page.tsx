@@ -11,6 +11,8 @@ import {
   SessionButtons,
 } from "@/components/admin/member-actions";
 import { MemberAvatar } from "@/components/admin/member-avatar";
+import { LogSession } from "@/components/admin/coaching-actions";
+import { NoteComposer, TagEditor } from "@/components/admin/member-extras";
 import { Panel } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { VisitCalendar } from "@/components/admin/visit-calendar";
@@ -73,12 +75,16 @@ export default async function MemberPage({ params, searchParams }: { params: Pro
             <StatusBadge status={s.status} />
             {m.archivedAt ? <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-semibold text-text-secondary">Archived</span> : null}
             {m.source === "glofox" ? <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-semibold text-text-secondary">From Glofox</span> : null}
+            {d.atRisk ? <span className="rounded-full bg-energy/15 px-2.5 py-0.5 text-xs font-semibold text-energy">At risk: no visit in {d.quietDays} days</span> : null}
           </div>
           <h1 className="text-statement mt-2 text-[40px] break-words md:text-[60px]">{name}</h1>
           <p className="mt-1 text-text-secondary">
             <span className="tabular">#{m.memberNo}</span>
             {m.nickname ? ` · “${m.nickname}”` : ""} · Member since {formatDate(m.createdAt.toISOString().slice(0, 10), today)}
           </p>
+          <div className="mt-2">
+            <TagEditor memberId={m.id} tags={m.tags} />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {m.phone ? (
@@ -186,7 +192,10 @@ export default async function MemberPage({ params, searchParams }: { params: Pro
                         </div>
                         <p className="mt-2 text-xs text-text-tertiary">Valid until {formatDate(p.endsOn, today)}</p>
                       </div>
-                      <SessionButtons id={p.id} left={left} used={p.sessionsUsed} />
+                      <div className="space-y-2">
+                        <LogSession membershipId={p.id} coaches={d.coaches} defaultCoach={d.lastCoach[p.id] ?? null} left={left} />
+                        <SessionButtons id={p.id} left={left} used={p.sessionsUsed} undoOnly />
+                      </div>
                     </li>
                   );
                 })}
@@ -262,12 +271,16 @@ export default async function MemberPage({ params, searchParams }: { params: Pro
             )}
           </Panel>
 
-          <Panel title="Activity">
+          <Panel title="Notes & activity">
+            <NoteComposer memberId={m.id} />
             <ol className="space-y-3">
               {d.activity.map((a) => (
-                <li key={a.id} className="flex gap-3 text-sm">
-                  <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-white/40" />
-                  <span className="flex-1">{a.message}</span>
+                <li key={a.id} className={cn("flex gap-3 text-sm", a.type === "note" && "rounded-2xl bg-surface-2 p-3")}>
+                  <span aria-hidden className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", a.type === "note" ? "bg-energy" : "bg-white/40")} />
+                  <span className="flex-1">
+                    {a.message}
+                    {a.staffName ? <span className="text-text-tertiary"> · {a.staffName}</span> : null}
+                  </span>
                   <span className="shrink-0 text-xs text-text-tertiary">{formatMoment(a.at)}</span>
                 </li>
               ))}

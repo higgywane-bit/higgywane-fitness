@@ -200,17 +200,19 @@ export function MembershipMenu({
   );
 }
 
-export function SessionButtons({ id, left, used }: { id: string; left: number; used: number }) {
+export function SessionButtons({ id, left, used, undoOnly = false }: { id: string; left: number; used: number; undoOnly?: boolean }) {
   const { run, pending, error } = useAction();
   return (
     <div>
       <div className="flex gap-2">
-        <Button disabled={pending || left <= 0} onClick={() => run(() => logSessionAction(id, 1))}>
-          <Minus className="size-4" aria-hidden />
-          Log a session
-        </Button>
+        {undoOnly ? null : (
+          <Button disabled={pending || left <= 0} onClick={() => run(() => logSessionAction(id, 1))}>
+            <Minus className="size-4" aria-hidden />
+            Log a session
+          </Button>
+        )}
         <Button variant="ghost" disabled={pending || used <= 0} onClick={() => run(() => logSessionAction(id, -1))}>
-          Undo
+          Undo last session
         </Button>
       </div>
       <ErrorLine error={error} />

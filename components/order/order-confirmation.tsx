@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useOrders } from "@/lib/order-store";
 import { formatTHB } from "@/lib/format";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { OrderProgress } from "./order-progress";
 
 const METHOD_LABEL = { promptpay: "PromptPay", "apple-pay": "Apple Pay", counter: "Qashier terminal" } as const;
 
@@ -61,6 +62,7 @@ export function OrderConfirmation({ id }: { id: string }) {
             ? `Paid ${formatTHB(order.subtotal)} with ${METHOD_LABEL[order.payment.method]}.`
             : `Show order ${order.number} at the counter and pay ${formatTHB(order.subtotal)} by card or cash.`}
         </p>
+        <OrderProgress id={order.id} />
         <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-hairline pt-4 text-sm">
           <div>
             <dt className="text-text-tertiary">Pickup</dt>

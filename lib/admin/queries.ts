@@ -29,9 +29,18 @@ export type MemberListRow = {
   ptLeft: number | null;
   lastVisit: string | null;
   codes: string[];
+  tags: string[];
+  marketingOptIn: boolean;
+  /** can train but hasn't been in for a while (see AT_RISK_DAYS) */
+  atRisk: boolean;
 };
 
-function toRow(m: typeof t.members.$inferSelect, s: MemberStanding, lastVisit: Date | undefined, codes: string[]): MemberListRow {
+/** Active members who haven't visited in this many days are flagged "at risk". */
+export const AT_RISK_DAYS = 14;
+
+function toRow(m: typeof t.members.$inferSelect, s: MemberStanding, lastVisit: Date | undefined, codes: string[], now: Date): MemberListRow {
+  const quietSince = lastVisit ?? m.createdAt;
+  const atRisk = (s.status === "active" || s.status === "expiring") && now.getTime() - quietSince.getTime() > AT_RISK_DAYS * 86_400_000;
   return {
     id: m.id,
     memberNo: m.memberNo,
@@ -54,6 +63,9 @@ function toRow(m: typeof t.members.$inferSelect, s: MemberStanding, lastVisit: D
     ptLeft: s.pt?.sessionsLeft ?? null,
     lastVisit: lastVisit?.toISOString() ?? null,
     codes,
+    tags: m.tags ?? [],
+    marketingOptIn: m.marketingOptIn,
+    atRisk,
   };
 }
 
@@ -76,7 +88,7 @@ export async function listMembers(now = new Date()): Promise<MemberListRow[]> {
   const last = new Map(visits.map((v) => [v.memberId, v.last]));
   const codes = new Map<string, string[]>();
   for (const c of creds) codes.set(c.memberId, [...(codes.get(c.memberId) ?? []), c.code]);
-  return rows.map((m) => toRow(m, memberStanding(byMember.get(m.id) ?? [], today), last.get(m.id), codes.get(m.id) ?? []));
+  return rows.map((m) => toRow(m, memberStanding(byMember.get(m.id) ?? [], today), last.get(m.id), codes.get(m.id) ?? [], now));
 }
 
 export async function getMemberDetail(id: string, now = new Date()) {
@@ -92,10 +104,25 @@ export async function getMemberDetail(id: string, now = new Date()) {
       .from(t.checkIns)
       .where(and(eq(t.checkIns.memberId, id), gte(t.checkIns.at, new Date(now.getTime() - 400 * 86_400_000))))
       .orderBy(desc(t.checkIns.at)),
-    db.select().from(t.activity).where(eq(t.activity.memberId, id)).orderBy(desc(t.activity.at)).limit(40),
+    db
+      .select({ a: t.activity, staffName: t.staff.name })
+      .from(t.activity)
+      .leftJoin(t.staff, eq(t.staff.id, t.activity.staffId))
+      .where(eq(t.activity.memberId, id))
+      .orderBy(desc(t.activity.at))
+      .limit(60),
   ]);
+  const [coachRows, ptLog] = await Promise.all([
+    db.select({ id: t.staff.id, name: t.staff.name }).from(t.staff).where(and(eq(t.staff.role, "coach"), eq(t.staff.active, true))).orderBy(t.staff.name),
+    db.select({ membershipId: t.ptSessions.membershipId, coachId: t.ptSessions.coachId }).from(t.ptSessions).where(eq(t.ptSessions.memberId, id)).orderBy(t.ptSessions.at),
+  ]);
+  const lastCoach: Record<string, string | null> = {};
+  for (const l of ptLog) if (l.membershipId) lastCoach[l.membershipId] = l.coachId;
   const standing = memberStanding(ms, today);
   const allowed = visits.filter((v) => v.allowed);
+  const quietSince = allowed[0]?.at ?? member.createdAt;
+  const quietDays = Math.floor((now.getTime() - quietSince.getTime()) / 86_400_000);
+  const atRisk = (standing.status === "active" || standing.status === "expiring") && quietDays > AT_RISK_DAYS;
   return {
     member,
     standing,
@@ -110,7 +137,11 @@ export async function getMemberDetail(id: string, now = new Date()) {
       last30: allowed.filter((v) => localDate(v.at) > addDays(today, -30)).length,
       total: allowed.length,
     },
-    activity: log,
+    activity: log.map((x) => ({ ...x.a, staffName: x.staffName })),
+    coaches: coachRows,
+    lastCoach,
+    atRisk,
+    quietDays,
   };
 }
 

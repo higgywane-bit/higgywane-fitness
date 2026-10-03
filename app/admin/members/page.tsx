@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { FileUp, UserPlus } from "lucide-react";
+import { Download, FileUp, UserPlus } from "lucide-react";
 import { MembersTable } from "@/components/admin/members-table";
 import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,12 @@ export default async function MembersPage() {
   return (
     <div className="pb-12">
       <PageHeader eyebrow={`${live} members`} title="Members">
+        <Button asChild variant="ghost">
+          <a href="/admin/export/members" download>
+            <Download className="size-4" aria-hidden />
+            Export CSV
+          </a>
+        </Button>
         <Button asChild variant="outline">
           <Link href="/admin/import">
             <FileUp className="size-4" aria-hidden />

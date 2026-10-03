@@ -12,6 +12,8 @@ import {
   selectionSummary,
 } from "@/lib/nutrition";
 import type { Order, OrderInput, OrderLine } from "@/lib/orders";
+import { getDb } from "@/lib/db";
+import { orderStatus, saveWebOrder, markOrderPaid } from "@/lib/cafe/orders";
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -54,28 +56,42 @@ export async function placeOrder(input: OrderInput): Promise<Result<Order>> {
     customerName: name,
   });
 
-  // TODO: persist the order and notify staff (session 5: real ordering)
-  return {
-    ok: true,
-    data: {
-      id,
-      number,
-      createdAt: new Date().toISOString(),
-      lines,
-      subtotal,
-      macros: cartMacros(lines),
-      customer: { name, contact: input.customer.contact?.trim() || undefined },
-      pickup: input.pickup,
-      service: input.service,
-      note: input.note?.trim() || undefined,
-      payment,
-    },
+  const order: Order = {
+    id,
+    number,
+    createdAt: new Date().toISOString(),
+    lines,
+    subtotal,
+    macros: cartMacros(lines),
+    customer: { name, contact: input.customer.contact?.trim() || undefined },
+    pickup: input.pickup,
+    service: input.service,
+    note: input.note?.trim() || undefined,
+    payment,
   };
+  // Show it on the bar's order board. If that fails, the customer's order still goes through.
+  try {
+    await saveWebOrder(await getDb(), order);
+  } catch (err) {
+    console.error("cafe order not saved to admin", err);
+  }
+  return { ok: true, data: order };
 }
 
-export async function paymentStatus(paymentId: string): Promise<Result<Payment>> {
+/** Live status for the confirmation page (preparing → ready). */
+export async function liveOrderStatus(id: string): Promise<Result<{ status: string; paymentStatus: string } | null>> {
   try {
-    return { ok: true, data: await getPaymentProvider().getStatus(paymentId) };
+    return { ok: true, data: await orderStatus(await getDb(), id) };
+  } catch {
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+export async function paymentStatus(paymentId: string, orderId?: string): Promise<Result<Payment>> {
+  try {
+    const payment = await getPaymentProvider().getStatus(paymentId);
+    if (orderId && payment.status === "paid") await markOrderPaid(await getDb(), orderId).catch(() => {});
+    return { ok: true, data: payment };
   } catch {
     return { ok: false, error: "We couldn't check the payment. Try again." };
   }

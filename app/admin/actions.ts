@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actingStaffId } from "@/lib/staff/session";
+import { withActor } from "@/lib/staff/context";
 import { getDb } from "@/lib/db";
 import { searchMembers, recentCheckIns, todayCount, type FeedItem, type MemberListRow } from "@/lib/admin/queries";
 import { planImport, removeDemoData, runImport, type ImportPlan } from "@/lib/membership/import";
@@ -12,12 +14,37 @@ import { sendReminders } from "@/lib/membership/reminder-service";
 import { saveLayout } from "@/lib/dashboard/layout";
 import { deleteReport, saveReport, updateReport } from "@/lib/reports/service";
 import type { ReportKind } from "@/lib/reports/analyze";
+import { listMembers } from "@/lib/admin/queries";
+import { addMemberNote, recipientsFor, sendMessage, setMemberTags } from "@/lib/messages/service";
+import type { SegmentId } from "@/lib/messages/segments";
+import { addLeadNote, convertLead, createLead, deleteLead, leadTimeline, setLeadStage, updateLead, type LeadInput } from "@/lib/leads/service";
+import type { CafeOrderStatus, LeadStage } from "@/lib/db/schema";
+import { setBookingStatus, type BookingStatus } from "@/lib/coaching/service";
+import { boardOrders, markOrderPaid, setOrderStatus } from "@/lib/cafe/orders";
+import { serializeOrders } from "@/lib/cafe/serialize";
+import {
+  addShift,
+  clockIn,
+  clockOut,
+  copyWeek,
+  createStaff,
+  removeShift,
+  setStaffActive,
+  updateStaff,
+  verifyPin,
+  type ShiftInput,
+  type StaffInput,
+} from "@/lib/staff/service";
+import { setActingStaff } from "@/lib/staff/session";
+import { addExpense, deleteExpense, endRecurring, type ExpenseInput } from "@/lib/expenses/service";
+import { saveTargets, type Targets } from "@/lib/performance/targets";
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
+/** Every admin action runs as the staff member currently working (for the activity log). */
 async function run<T>(fn: () => Promise<T>, revalidate = true): Promise<Result<T>> {
   try {
-    const data = await fn();
+    const data = await withActor(await actingStaffId(), fn);
     if (revalidate) revalidatePath("/admin", "layout");
     return { ok: true, data };
   } catch (err) {
@@ -163,4 +190,160 @@ export async function updateReportAction(id: string, patch: { kind?: ReportKind;
 
 export async function deleteReportAction(id: string) {
   return run(async () => deleteReport(await getDb(), id));
+}
+
+/* ── Members: tags, notes ─────────────────────────────────── */
+
+export async function setTagsAction(memberId: string, tags: string) {
+  return run(async () => setMemberTags(await getDb(), memberId, tags));
+}
+
+export async function addNoteAction(memberId: string, note: string) {
+  return run(async () => addMemberNote(await getDb(), memberId, note));
+}
+
+/* ── Messages ─────────────────────────────────────────────── */
+
+export async function previewAudienceAction(audience: SegmentId) {
+  return run(async () => {
+    const rows = recipientsFor(await listMembers(), audience);
+    return { count: rows.length, sample: rows.slice(0, 5).map((r) => ({ name: r.name, email: r.email })) };
+  }, false);
+}
+
+export async function sendMessageAction(input: { audience: SegmentId; subject: string; body: string }) {
+  return run(async () => {
+    const row = await sendMessage(await getDb(), getMailer(), await listMembers(), input);
+    return { id: row.id, sent: row.sent, status: row.status };
+  });
+}
+
+/* ── Leads ────────────────────────────────────────────────── */
+
+export async function createLeadAction(input: LeadInput) {
+  return run(async () => (await createLead(await getDb(), input)).id);
+}
+
+export async function updateLeadAction(id: string, input: LeadInput) {
+  return run(async () => updateLead(await getDb(), id, input));
+}
+
+export async function setLeadStageAction(id: string, stage: LeadStage, lostReason?: string) {
+  return run(async () => setLeadStage(await getDb(), id, stage, { lostReason }));
+}
+
+export async function addLeadNoteAction(id: string, note: string) {
+  return run(async () => addLeadNote(await getDb(), id, note));
+}
+
+export async function convertLeadAction(id: string) {
+  return run(async () => convertLead(await getDb(), id));
+}
+
+export async function deleteLeadAction(id: string) {
+  return run(async () => deleteLead(await getDb(), id));
+}
+
+export async function leadTimelineAction(id: string) {
+  return run(async () => (await leadTimeline(await getDb(), id)).map((a) => ({ id: a.id, type: a.type, message: a.message, at: a.at.toISOString() })), false);
+}
+
+/* ── Coaching ─────────────────────────────────────────────── */
+
+export async function setBookingStatusAction(id: string, status: BookingStatus) {
+  return run(async () => setBookingStatus(await getDb(), id, status));
+}
+
+export async function logPtSessionAction(membershipId: string, coachId: string | null, status: "done" | "no-show" = "done") {
+  return run(async () => svc.useSession(await getDb(), membershipId, 1, { coachId, status }));
+}
+
+/* ── Cafe orders ──────────────────────────────────────────── */
+
+export async function setOrderStatusAction(id: string, status: CafeOrderStatus) {
+  return run(async () => {
+    await setOrderStatus(await getDb(), id, status);
+  });
+}
+
+export async function markOrderPaidAction(id: string) {
+  return run(async () => markOrderPaid(await getDb(), id));
+}
+
+export async function cafeBoardAction() {
+  return run(async () => serializeOrders(await boardOrders(await getDb())), false);
+}
+
+/* ── Staff, rota, time clock ──────────────────────────────── */
+
+export async function createStaffAction(input: StaffInput) {
+  return run(async () => (await createStaff(await getDb(), input)).id);
+}
+
+export async function updateStaffAction(id: string, input: StaffInput) {
+  return run(async () => updateStaff(await getDb(), id, input));
+}
+
+export async function setStaffActiveAction(id: string, active: boolean) {
+  return run(async () => setStaffActive(await getDb(), id, active));
+}
+
+export async function addShiftAction(input: ShiftInput) {
+  return run(async () => {
+    await addShift(await getDb(), input);
+  });
+}
+
+export async function removeShiftAction(id: string) {
+  return run(async () => removeShift(await getDb(), id));
+}
+
+export async function copyWeekAction(fromMonday: string, toMonday: string) {
+  return run(async () => copyWeek(await getDb(), fromMonday, toMonday));
+}
+
+export async function clockAction(staffId: string, direction: "in" | "out") {
+  return run(async () => {
+    const db = await getDb();
+    if (direction === "in") await clockIn(db, staffId);
+    else await clockOut(db, staffId);
+  });
+}
+
+/** Switch who's working on this device. Staff with a PIN must enter it. */
+export async function switchStaffAction(staffId: string | null, pin: string) {
+  try {
+    if (!staffId) {
+      await setActingStaff(null);
+      revalidatePath("/admin", "layout");
+      return { ok: true as const, data: null };
+    }
+    const s = await verifyPin(await getDb(), staffId, pin);
+    await setActingStaff(s.id);
+    revalidatePath("/admin", "layout");
+    return { ok: true as const, data: { name: s.name } };
+  } catch (err) {
+    if (err instanceof svc.ServiceError) return { ok: false as const, error: err.message };
+    return { ok: false as const, error: "Something went wrong. Try again." };
+  }
+}
+
+/* ── Expenses & targets ───────────────────────────────────── */
+
+export async function addExpenseAction(input: ExpenseInput) {
+  return run(async () => {
+    await addExpense(await getDb(), input);
+  });
+}
+
+export async function deleteExpenseAction(id: string) {
+  return run(async () => deleteExpense(await getDb(), id));
+}
+
+export async function endRecurringAction(id: string, endsOn: string) {
+  return run(async () => endRecurring(await getDb(), id, endsOn));
+}
+
+export async function saveTargetsAction(targets: Targets) {
+  return run(async () => saveTargets(await getDb(), targets));
 }

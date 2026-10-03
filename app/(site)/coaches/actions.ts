@@ -1,6 +1,7 @@
 "use server";
 
-import { getCoach } from "@/content/coaches";
+import { getCoach } from "@/lib/catalog";
+import { getCatalog } from "@/lib/catalog/server";
 import { nowTime, todayISO, validateBooking, validateMessage, type BookingInput, type MessageInput } from "@/lib/booking";
 import { getPTPackage } from "@/lib/pricing";
 import { getDb } from "@/lib/db";
@@ -11,6 +12,7 @@ type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 export type BookingRequest = { reference: string; coach: string; packageName: string; date: string; time: string };
 
 export async function requestBooking(input: BookingInput): Promise<Result<BookingRequest>> {
+  await getCatalog();
   const coach = getCoach(input.coach);
   const pkg = getPTPackage(input.packageId);
   const now = new Date();
@@ -42,6 +44,7 @@ export async function requestBooking(input: BookingInput): Promise<Result<Bookin
 }
 
 export async function sendCoachMessage(input: MessageInput): Promise<Result<{ coach: string }>> {
+  await getCatalog();
   const coach = getCoach(input.coach);
   const check = validateMessage(input, coach);
   if (!check.ok) return check;

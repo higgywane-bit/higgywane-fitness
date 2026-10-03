@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { coaches, getCoach, specialties } from "@/content/coaches";
 import { bookableDays, nowTime, openSlots, todayISO, validateBooking, validateMessage, type BookingInput } from "@/lib/booking";
-import { lowestPerSession, ptPackages } from "@/lib/pricing";
+import { lowestPerSession, memberships, ptPackages } from "@/lib/pricing";
 
 describe("ptPackages", () => {
-  it("computes savings vs single sessions from pricing.json", () => {
+  it("computes savings vs single sessions from the plans", () => {
     const byCount = Object.fromEntries(ptPackages().map((p) => [p.sessions, p]));
     expect(byCount[1].saving).toBe(0);
     expect(byCount[3].saving).toBe(100);
@@ -80,5 +80,16 @@ describe("booking", () => {
   it("validates messages", () => {
     expect(validateMessage({ coach: "bella", name: "Mint", contact: "@mint", message: "Hi!" }, bella).ok).toBe(true);
     expect(validateMessage({ coach: "bella", name: "Mint", contact: "@mint", message: " " }, bella).ok).toBe(false);
+  });
+});
+
+describe("memberships", () => {
+  it("computes savings vs paying monthly", () => {
+    const byName = Object.fromEntries(memberships().map((m) => [m.name, m]));
+    expect(byName["1 Month"].saving).toBeUndefined();
+    expect(byName["3 Months"].saving).toBe(1200);
+    expect(byName["6 Months"].saving).toBe(4200);
+    expect(byName["12 Months"].saving).toBe(14400);
+    expect(byName["Day Pass"].saving).toBeUndefined();
   });
 });

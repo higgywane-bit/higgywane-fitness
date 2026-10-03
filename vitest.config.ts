@@ -9,5 +9,6 @@ export default defineConfig({
       "server-only": fileURLToPath(new URL("./tests/support/empty.ts", import.meta.url)),
     },
   },
-  test: { include: ["tests/unit/**/*.test.ts"], environment: "node" },
+  // Unit tests never touch the dev server's local database folder.
+  test: { include: ["tests/unit/**/*.test.ts"], environment: "node", env: { PGLITE_DIR: "memory://" } },
 });

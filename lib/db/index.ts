@@ -4,6 +4,7 @@ import { count } from "drizzle-orm";
 import { createDb, type DB } from "./client";
 import { members } from "./schema";
 import { seedDemo } from "./seed";
+import { ensureCatalog } from "@/lib/catalog/store";
 
 export type { DB } from "./client";
 export * as t from "./schema";
@@ -25,11 +26,16 @@ async function init(): Promise<DB> {
   return db;
 }
 
-/** One shared connection per server process (survives hot reloads in dev). */
-export function getDb(): Promise<DB> {
+/**
+ * One shared connection per server process (survives hot reloads in dev).
+ * Also keeps the editable catalog (menu, plans, coaches…) current for this request.
+ */
+export async function getDb(): Promise<DB> {
   globalForDb.__superfitDb ??= init().catch((err) => {
     globalForDb.__superfitDb = undefined;
     throw err;
   });
-  return globalForDb.__superfitDb;
+  const db = await globalForDb.__superfitDb;
+  await ensureCatalog(db);
+  return db;
 }

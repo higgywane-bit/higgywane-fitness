@@ -1,5 +1,5 @@
-import { getIngredient } from "@/content/ingredients";
-import { optionGroups, REMOVE_GROUP_ID } from "@/content/options";
+import { REMOVE_GROUP_ID } from "@/content/options";
+import { getIngredient, getOptionGroup } from "@/lib/catalog";
 import type { Allergen, CartLine, Macros, MenuItem, Option, OptionGroup, Selections } from "@/content/types";
 
 export const ZERO: Macros = { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fibre: 0 };
@@ -54,11 +54,8 @@ export function roundMacros(m: Macros): Macros {
 
 /** All option groups for an item, including its generated "remove" group. */
 export function itemGroups(item: MenuItem): OptionGroup[] {
-  const groups = (item.optionGroups ?? []).map((id) => {
-    const g = optionGroups[id];
-    if (!g) throw new Error(`Unknown option group: ${id}`);
-    return g;
-  });
+  // a group deleted in admin simply drops off the item
+  const groups = (item.optionGroups ?? []).map((id) => getOptionGroup(id)).filter((g): g is OptionGroup => !!g);
   const removable = item.recipe.filter((r) => r.removable);
   if (removable.length) {
     groups.push({

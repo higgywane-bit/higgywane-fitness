@@ -1,6 +1,7 @@
 "use server";
 
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
+import { getCatalog } from "@/lib/catalog/server";
 import { getPaymentProvider } from "@/lib/payments";
 import type { Payment } from "@/lib/payments/types";
 import {
@@ -25,7 +26,8 @@ export async function placeOrder(input: OrderInput): Promise<Result<Order>> {
     return { ok: false, error: "Add your table number, or switch to takeaway." };
   }
 
-  // Re-price on the server from menu data. Never trust client totals.
+  // Re-price on the server from the live menu. Never trust client totals.
+  await getCatalog();
   const lines: OrderLine[] = [];
   for (const l of input.lines) {
     const item = getMenuItem(l.itemId);

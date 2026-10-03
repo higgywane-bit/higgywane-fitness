@@ -3,7 +3,7 @@
 import { CalendarCheck, MessageCircle } from "lucide-react";
 import { motion, type MotionValue } from "motion/react";
 import type { Coach } from "@/content/types";
-import { specialties } from "@/content/coaches";
+import { specialties } from "@/lib/catalog";
 import { SPECIALTY_ICON } from "@/components/coaches/specialty-icon";
 import { cn } from "@/lib/utils";
 

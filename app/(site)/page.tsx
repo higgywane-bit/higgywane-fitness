@@ -1,15 +1,17 @@
 import Image from "next/image";
+import { getCatalog } from "@/lib/catalog/server";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { menu } from "@/content/menu";
+import { menuItems } from "@/lib/catalog";
 import { ProductCard } from "@/components/cafe/product-card";
 import { Button } from "@/components/ui/button";
 
 // Home is assembled properly in session 3; this is the launch-ready minimum.
 const FAVOURITES = ["thick", "berry-hype", "espresso-max", "bangkok-beat"];
 
-export default function HomePage() {
-  const favourites = FAVOURITES.map((slug) => menu.find((m) => m.slug === slug)!).filter(Boolean);
+export default async function HomePage() {
+  await getCatalog();
+  const favourites = FAVOURITES.map((slug) => menuItems().find((m) => m.slug === slug)!).filter(Boolean);
   return (
     <>
       <section className="relative isolate overflow-hidden">

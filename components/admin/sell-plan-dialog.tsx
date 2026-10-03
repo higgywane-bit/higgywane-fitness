@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { PAYMENT_METHODS } from "@/content/gym";
-import { PLANS, type PlanKind } from "@/content/plans";
+import type { PlanKind } from "@/content/plans";
+import { planList } from "@/lib/catalog";
 import { formatTHB } from "@/lib/format";
 import { planEndDate } from "@/lib/membership/access";
 import { addDays, formatDate, isISODate, localDate } from "@/lib/membership/dates";
@@ -35,7 +36,7 @@ export function SellPlanDialog({
 }) {
   const today = localDate();
   const [kind, setKind] = useState<PlanKind>(defaultKind);
-  const plans = PLANS.filter((p) => p.kind === kind);
+  const plans = planList(kind);
   const [planId, setPlanId] = useState<string>(kind === "membership" ? "1-month" : "pt-10");
   const plan = plans.find((p) => p.id === planId);
   const autoStart = kind === "membership" && member.coverEnds && member.coverEnds >= today ? addDays(member.coverEnds, 1) : today;

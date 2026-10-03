@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getCoach } from "@/content/coaches";
+import { getCoach } from "@/lib/catalog";
 import type { DB } from "@/lib/db/client";
 import { ptBookings } from "@/lib/db/schema";
 import { logActivity, ServiceError } from "@/lib/membership/service";

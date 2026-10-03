@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { CatalogProvider } from "@/components/catalog-provider";
+import { getCatalog } from "@/lib/catalog/server";
 import { adminAuthConfig } from "@/lib/admin-auth";
 import { getDb, t } from "@/lib/db";
 import { listStaff, openEntry } from "@/lib/staff/service";
@@ -15,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const db = await getDb();
+  const catalog = await getCatalog();
   const [staff, actingId, [orders], [bookings], [leadsNew]] = await Promise.all([
     listStaff(db),
     actingStaffId(),
@@ -32,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       signedIn={!!adminAuthConfig()}
       badges={{ "/admin/cafe": orders.n, "/admin/coaching": bookings.n, "/admin/leads": leadsNew.n }}
     >
-      {children}
+      <CatalogProvider value={catalog}>{children}</CatalogProvider>
     </AdminShell>
   );
 }

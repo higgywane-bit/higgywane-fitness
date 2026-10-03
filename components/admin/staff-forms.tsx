@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { addShiftAction, copyWeekAction, createStaffAction, removeShiftAction, setStaffActiveAction, updateStaffAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { coaches } from "@/content/coaches";
+import { coachList } from "@/lib/catalog";
 import { AREAS, ROLES, type Area, type Role } from "@/lib/staff/rules";
 import { AdminDialog, ErrorText, Select, useAction } from "./kit";
 
@@ -68,7 +68,7 @@ export function StaffFormButton({ initial, label = "Add staff", variant = "prima
               <Label htmlFor="st-coach">Coach profile on website</Label>
               <Select id="st-coach" value={v.coachSlug} onChange={set("coachSlug")}>
                 <option value="">—</option>
-                {coaches.map((c) => (
+                {coachList({ includeHidden: true }).map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.name}
                   </option>

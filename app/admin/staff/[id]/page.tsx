@@ -5,7 +5,7 @@ import { MemberAvatar } from "@/components/admin/member-avatar";
 import { PageHeader, Panel } from "@/components/admin/page-header";
 import { ActiveToggle, StaffFormButton } from "@/components/admin/staff-forms";
 import { StatTile } from "@/components/admin/stat-tile";
-import { getCoach } from "@/content/coaches";
+import { getCoach } from "@/lib/catalog";
 import { formatPhone, formatTHB } from "@/lib/format";
 import { formatDate, formatMoment, formatTime, localDate } from "@/lib/membership/dates";
 import { AREAS, ROLES } from "@/lib/staff/rules";

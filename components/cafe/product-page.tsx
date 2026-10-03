@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
 import { ProductConfigurator } from "@/components/cafe/product-configurator";
 import { useCart, useCartUI } from "@/lib/cart-store";
 import { useHydrated } from "@/hooks/use-hydrated";

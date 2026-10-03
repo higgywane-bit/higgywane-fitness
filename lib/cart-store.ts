@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
 import type { CartLine, Selections } from "@/content/types";
 import { itemMacros, itemPrice } from "@/lib/nutrition";
 

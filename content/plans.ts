@@ -19,6 +19,10 @@ export type Plan = {
   /** PT packs: number of sessions */
   sessions?: number;
   badge?: string;
+  /** one-line description shown on the Train page */
+  description?: string;
+  /** no longer sold, kept so past sales still resolve */
+  hidden?: boolean;
 };
 
 const MEMBERSHIP_DURATION: Record<string, PlanDuration> = {
@@ -51,6 +55,7 @@ export const PLANS: Plan[] = [
     price: p.price,
     duration: MEMBERSHIP_DURATION[p.name] ?? { days: 30 },
     badge: "badge" in p ? p.badge : undefined,
+    description: "description" in p ? p.description : undefined,
   })),
   ...pricing.sections.personal_training.products.map((p): Plan => ({
     id: `pt-${p.sessions}`,

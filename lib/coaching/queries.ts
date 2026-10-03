@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
-import { getCoach } from "@/content/coaches";
-import { getPlan } from "@/content/plans";
+import { getCoach } from "@/lib/catalog";
+import { getPlan } from "@/lib/catalog";
 import { getDb, t } from "@/lib/db";
 import { membershipState, sessionsLeft } from "@/lib/membership/access";
 import { addDays, localDate } from "@/lib/membership/dates";

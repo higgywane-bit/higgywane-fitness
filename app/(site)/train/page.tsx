@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getCatalog } from "@/lib/catalog/server";
 import Link from "next/link";
 import { memberships, ptPackages } from "@/lib/pricing";
 import { TrainContent } from "@/components/train/train-content";
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
   description: "Gym memberships and personal training packages at Superfit Thailand.",
 };
 
-export default function TrainPage() {
+export default async function TrainPage() {
+  await getCatalog();
   const membershipList = memberships();
   const ptList = ptPackages();
 

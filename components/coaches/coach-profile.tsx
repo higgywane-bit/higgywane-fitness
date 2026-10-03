@@ -4,7 +4,7 @@ import { ArrowRight, ChevronLeft, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { coaches, specialties } from "@/content/coaches";
+import { coachList, specialties } from "@/lib/catalog";
 import type { Coach } from "@/content/types";
 import { BookingSheet, type SheetState } from "@/components/coaches/booking-sheet";
 import { CoachBackdrop, CoachHeroFace } from "@/components/coaches/coach-art";
@@ -37,6 +37,7 @@ function SectionTitle({ kicker, children }: { kicker: string; children: React.Re
 }
 
 export function CoachProfile({ coach }: { coach: Coach }) {
+  const coaches = coachList();
   const index = coaches.findIndex((c) => c.slug === coach.slug);
   const [sheet, setSheet] = useState<SheetState>(null);
   const [heroGone, setHeroGone] = useState(false);

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Check, Store } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
 import { DrinkArt } from "@/components/cafe/drink-art";
 import { OrderMacros } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";

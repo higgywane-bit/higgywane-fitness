@@ -8,7 +8,7 @@ import { createMemberAction, duplicatesAction, updateMemberAction } from "@/app/
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { PAYMENT_METHODS } from "@/content/gym";
-import { PLANS } from "@/content/plans";
+import { planList } from "@/lib/catalog";
 import { formatTHB } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -177,7 +177,7 @@ export function MemberForm({
           <fieldset>
             <legend className="mb-3 text-sm font-semibold text-white">Membership (optional)</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[{ id: "", name: "Later", price: null as number | null }, ...PLANS.filter((p) => p.kind === "membership")].map((p) => (
+              {[{ id: "", name: "Later", price: null as number | null }, ...planList("membership")].map((p) => (
                 <label
                   key={p.id || "none"}
                   className={cn("tap flex min-h-16 cursor-pointer flex-col justify-center rounded-2xl px-3 py-2", planId === p.id ? "glass-lit" : "glass hover:bg-white/[0.07]")}

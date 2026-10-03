@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { getCatalog } from "@/lib/catalog/server";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { coaches } from "@/content/coaches";
+import { coachList } from "@/lib/catalog";
 import { CoachCarousel } from "@/components/coaches/coach-carousel";
 import { formatTHB } from "@/lib/format";
 import { lowestPerSession } from "@/lib/pricing";
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
   description: "Meet the Superfit coaching team: Bella, Nicha, Aun and Poom. Book a PT session or message a coach.",
 };
 
-export default function CoachesPage() {
+export default async function CoachesPage() {
+  await getCatalog();
   return (
     <div className="overflow-x-clip">
       <header className="mx-auto max-w-7xl px-4 pt-5 pb-5 md:px-8 md:pt-12 md:pb-10">
@@ -26,7 +28,7 @@ export default function CoachesPage() {
       </header>
 
       <section aria-label="Choose a coach" className="mx-auto max-w-7xl px-4 md:px-8">
-        <CoachCarousel coaches={coaches} />
+        <CoachCarousel coaches={coachList()} />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-14 pb-16 md:px-8">

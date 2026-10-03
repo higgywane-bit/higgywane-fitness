@@ -1,4 +1,5 @@
-import { PLANS, type Plan } from "@/content/plans";
+import type { Plan } from "@/content/plans";
+import { planList } from "@/lib/catalog";
 import { autoMap, parseLooseDate } from "@/lib/csv";
 import { normalizeCode } from "./codes";
 import { addDays, addMonths, type ISODate } from "./dates";
@@ -55,7 +56,7 @@ export function matchPlan(raw: string | undefined): Plan | null {
   if (!raw) return null;
   const s = raw.toLowerCase();
   const n = Number(s.match(/(\d+)/)?.[1] ?? NaN);
-  const find = (id: string) => PLANS.find((p) => p.id === id) ?? null;
+  const find = (id: string) => planList(undefined, { includeHidden: true }).find((p) => p.id === id) ?? null;
   if (/\b(pt|personal)/.test(s)) return find(`pt-${Number.isFinite(n) ? n : 1}`);
   if (/day|drop.?in|casual/.test(s)) return find("day-pass");
   if (/annual|year|12\s*m/.test(s)) return find("12-months");

@@ -47,7 +47,8 @@ export type OptionGroup = {
   options: Option[];
 };
 
-export type CategoryId = "smoothies" | "coffee" | "food" | "merchandise";
+/** "smoothies", "coffee", … or any category added in admin */
+export type CategoryId = string;
 
 export type Tag = "high-protein" | "low-cal" | "vegan" | "caffeine" | "recovery" | "energy" | "pre-workout" | "post-workout" | "best-seller" | "high-caffeine" | "limited-edition";
 
@@ -130,4 +131,8 @@ export type Coach = {
   /** session start times, "HH:MM" in Bangkok time */
   slots: string[];
   contact?: { line?: string; instagram?: string };
+  /** portrait uploaded in admin (/media/…); without one the typographic portrait is used */
+  photo?: string;
+  /** hidden coaches stay in the data (bookings, history) but leave the website */
+  hidden?: boolean;
 };

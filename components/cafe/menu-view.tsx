@@ -2,40 +2,42 @@
 
 import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { categories, menu } from "@/content/menu";
 import type { CategoryId } from "@/content/types";
 import { ProductCard } from "@/components/cafe/product-card";
 import { StarMark } from "@/components/brand/logo";
-import { getIngredient } from "@/content/ingredients";
+import { findIngredient, menuCategories, menuItems } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
 const GRID = "grid grid-cols-2 gap-x-3 gap-y-7 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4";
 
 function matches(q: string) {
   const needle = q.trim().toLowerCase();
-  return menu.filter(
+  return menuItems().filter(
     (m) =>
       m.name.toLowerCase().includes(needle) ||
       m.description?.toLowerCase().includes(needle) ||
-      m.recipe.some((r) => getIngredient(r.ingredientId).name.toLowerCase().includes(needle)),
+      m.recipe.some((r) => findIngredient(r.ingredientId)?.name.toLowerCase().includes(needle)),
   );
 }
 
 export function MenuView() {
-  const [active, setActive] = useState<CategoryId>(categories[0].id);
+  const categories = menuCategories().filter((c) => menuItems().some((m) => m.category === c.id));
+  const [active, setActive] = useState<CategoryId>(categories[0]?.id ?? "smoothies");
   const [query, setQuery] = useState("");
   const chipRefs = useRef<Partial<Record<CategoryId, HTMLButtonElement | null>>>({});
   const stickyRef = useRef<HTMLDivElement>(null);
   const clickLock = useRef(0);
 
   const searching = query.trim().length > 0;
+  const catKey = categories.map((c) => c.id).join(",");
   const results = useMemo(() => (searching ? matches(query) : []), [query, searching]);
 
   // Scroll-spy: the section nearest the top of the viewport (below the sticky bar) is active.
   useEffect(() => {
     if (searching) return;
-    const sections = categories
-      .map((c) => document.getElementById(`cat-${c.id}`))
+    const sections = catKey
+      .split(",")
+      .map((id) => document.getElementById(`cat-${id}`))
       .filter((el): el is HTMLElement => Boolean(el));
     const visible = new Map<string, boolean>();
     const io = new IntersectionObserver(
@@ -49,7 +51,7 @@ export function MenuView() {
     );
     sections.forEach((s) => io.observe(s));
     return () => io.disconnect();
-  }, [searching]);
+  }, [searching, catKey]);
 
   // Keep the active chip in view. Scroll only the chip row: scrollIntoView would also
   // move the window and cancel the smooth scroll started by a chip tap.
@@ -169,7 +171,7 @@ export function MenuView() {
           </section>
         ) : (
           categories.map((c, ci) => {
-            const items = menu.filter((m) => m.category === c.id);
+            const items = menuItems().filter((m) => m.category === c.id);
             return (
               <section key={c.id} id={`cat-${c.id}`} aria-labelledby={`h-${c.id}`} className="pt-8 md:pt-12">
                 <div className="mb-5 flex items-end justify-between gap-4">

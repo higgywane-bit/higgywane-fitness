@@ -4,7 +4,7 @@ import { Check, ChevronLeft, Loader2, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo, useState, useTransition } from "react";
 import { requestBooking, sendCoachMessage, type BookingRequest } from "@/app/(site)/coaches/actions";
-import { specialties } from "@/content/coaches";
+import { specialties } from "@/lib/catalog";
 import type { Coach } from "@/content/types";
 import { SelectGlow } from "@/components/motion/select-glow";
 import { CheckIndicator } from "@/components/ui/check-indicator";

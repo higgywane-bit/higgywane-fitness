@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
 import { ProductConfigurator } from "@/components/cafe/product-configurator";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";

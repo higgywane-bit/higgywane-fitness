@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { GYM } from "@/content/gym";
-import { getPlan } from "@/content/plans";
+import { getPlan } from "@/lib/catalog";
 import type { DB } from "@/lib/db/client";
 import { activity, checkIns, credentials, members, memberships, ptSessions, staff, type Member, type MembershipRow } from "@/lib/db/schema";
 import {
@@ -21,7 +21,9 @@ import { addDays, diffDays, isISODate, localDate, type ISODate } from "./dates";
  * Server actions and API routes call these; tests run them against in-memory Postgres.
  */
 
-export class ServiceError extends Error {}
+import { ServiceError } from "@/lib/errors";
+
+export { ServiceError };
 
 export type CheckInMethod = "scan" | "camera" | "typed" | "search";
 

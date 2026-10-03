@@ -5,7 +5,7 @@ import { PageHeader, Panel } from "@/components/admin/page-header";
 import { RemoveDemoButton, SendRemindersButton } from "@/components/admin/settings-actions";
 import { Button } from "@/components/ui/button";
 import { GYM } from "@/content/gym";
-import { PLANS } from "@/content/plans";
+import { planList } from "@/lib/catalog";
 import { getDb, t } from "@/lib/db";
 import { getMailer } from "@/lib/email";
 import { formatTHB } from "@/lib/format";
@@ -141,7 +141,7 @@ export default async function SettingsPage() {
           </dl>
           <h3 className="mt-5 mb-2 text-[13px] font-medium text-text-secondary">Plans (prices from pricing.json)</h3>
           <ul className="grid grid-cols-2 gap-x-6 text-sm">
-            {PLANS.map((p) => (
+            {planList().map((p) => (
               <li key={p.id} className="flex justify-between gap-3 py-1.5">
                 <span className="text-text-secondary">{p.name}</span>
                 <span className="tabular">{formatTHB(p.price)}</span>

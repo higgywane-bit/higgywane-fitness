@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
 import type { CartLine } from "@/content/types";
 import { DrinkArt } from "@/components/cafe/drink-art";
 import { StarMark } from "@/components/brand/logo";

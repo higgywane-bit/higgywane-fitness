@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronLeft, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { getMenuItem } from "@/content/menu";
+import { getMenuItem } from "@/lib/catalog";
 import { DrinkArt } from "@/components/cafe/drink-art";
 import { OrderMacros } from "@/components/cart/cart-drawer";
 import { PaymentMethods } from "@/components/checkout/payment-methods";

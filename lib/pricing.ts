@@ -1,4 +1,10 @@
-import pricing from "@/content/pricing.json";
+import type { Plan } from "@/content/plans";
+import { planList } from "@/lib/catalog";
+
+/*
+ * Train page maths. Prices come from the live plans (Admin → Site & content → Plans,
+ * defaults from pricing.json); savings are always computed, never typed in.
+ */
 
 export type PTPackage = {
   id: string;
@@ -10,16 +16,16 @@ export type PTPackage = {
   saving: number;
 };
 
-type RawPT = { name: string; sessions: number; price: number; price_per_session?: number };
+type RawPT = { id?: string; name: string; sessions: number; price: number };
 
-export function ptPackages(products: RawPT[] = pricing.sections.personal_training.products): PTPackage[] {
+export function ptPackages(products: RawPT[] = planList("pt").map((p) => ({ id: p.id, name: p.name, sessions: p.sessions ?? 1, price: p.price }))): PTPackage[] {
   const single = products.find((p) => p.sessions === 1)?.price ?? 0;
   return products.map((p) => ({
-    id: `pt-${p.sessions}`,
+    id: p.id ?? `pt-${p.sessions}`,
     name: p.name,
     sessions: p.sessions,
     price: p.price,
-    perSession: p.price_per_session ?? Math.floor(p.price / p.sessions),
+    perSession: Math.floor(p.price / p.sessions),
     saving: Math.max(0, single * p.sessions - p.price),
   }));
 }
@@ -41,15 +47,19 @@ export type Membership = {
   saving?: number;
 };
 
-type RawMembership = { name: string; description?: string; price: number; badge?: string; saving?: number };
-
-export function memberships(products: RawMembership[] = pricing.sections.memberships.products): Membership[] {
-  return products.map((p, i) => ({
-    id: `member-${i}`,
-    name: p.name,
-    description: p.description || "",
-    price: p.price,
-    badge: p.badge,
-    saving: p.saving,
-  }));
+/** Saving vs paying month by month, for plans measured in months. */
+export function memberships(plans: Plan[] = planList("membership")): Membership[] {
+  const monthly = plans.find((p) => "months" in p.duration && p.duration.months === 1)?.price;
+  return plans.map((p) => {
+    const months = "months" in p.duration ? p.duration.months : 0;
+    const saving = monthly && months > 1 ? monthly * months - p.price : 0;
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description ?? "",
+      price: p.price,
+      badge: p.badge,
+      saving: saving > 0 ? saving : undefined,
+    };
+  });
 }

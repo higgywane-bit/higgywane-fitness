@@ -9,7 +9,7 @@ import { ItemTag } from "@/components/ui/tag";
 import { useCart } from "@/lib/cart-store";
 import { haptic, useFly } from "@/lib/fly-store";
 import { formatTHB } from "@/lib/format";
-import { itemDefaults, roundMacros } from "@/lib/nutrition";
+import { ingredientNames, itemDefaults, itemGroups, roundMacros } from "@/lib/nutrition";
 import { cn } from "@/lib/utils";
 
 export function ProductCard({ item, priority }: { item: MenuItem; priority?: boolean }) {
@@ -24,6 +24,10 @@ export function ProductCard({ item, priority }: { item: MenuItem; priority?: boo
   }, [added]);
   const { selections, macros } = itemDefaults(item);
   const m = roundMacros(macros);
+  const ingredients = ingredientNames(item, selections);
+  const addons = itemGroups(item)
+    .filter((g) => g.type === "multi")
+    .flatMap((g) => g.options.map((o) => o.label));
 
   const quickAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
     add({ itemId: item.id, selections, qty: 1 });
@@ -58,6 +62,22 @@ export function ProductCard({ item, priority }: { item: MenuItem; priority?: boo
           ) : null}
           {item.description ? (
             <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-text-secondary">{item.description}</p>
+          ) : null}
+          {ingredients.length ? (
+            <p className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-text-tertiary">
+              <span className="sr-only">Ingredients: </span>
+              {ingredients.join(" · ")}
+            </p>
+          ) : null}
+          {addons.length ? (
+            <p className="mt-1.5 flex items-center gap-1 text-[12px] font-medium text-text-secondary">
+              <Plus className="size-3 shrink-0" strokeWidth={2.75} aria-hidden />
+              <span className="min-w-0 truncate">
+                <span className="sr-only">Add-ons: </span>
+                {addons.slice(0, 3).join(", ")}
+              </span>
+              {addons.length > 3 ? <span className="tabular shrink-0 text-text-tertiary">+{addons.length - 3}</span> : null}
+            </p>
           ) : null}
           <p className="tabular mt-2 text-xs text-text-tertiary">
             {m.kcal} kcal

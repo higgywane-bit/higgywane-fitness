@@ -347,6 +347,65 @@ export async function sellPlan(db: DB, memberId: string, input: SellInput, now =
   return row;
 }
 
+/** "Nok Siri Wong" → first "Nok", last "Siri Wong" */
+export function splitName(full: string): { firstName: string; lastName: string } {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  return { firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") };
+}
+
+export type QuickPassInput = {
+  /** sell to someone already on file instead of creating a new member */
+  memberId?: string | null;
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  planId: string;
+  paymentMethod: string;
+  paymentRef?: string | null;
+  /** the card / paper code handed over at the desk */
+  code?: string | null;
+};
+
+/**
+ * The front desk's one-tap sale: new walk-in (or existing member) → plan sold →
+ * card or paper code linked → checked in. Everything is validated before anything is written.
+ */
+export async function quickPass(db: DB, input: QuickPassInput, now = new Date()): Promise<{ memberId: string; result: CheckInResult }> {
+  const plan = getPlan(input.planId);
+  if (!plan) throw new ServiceError("Pick a pass.");
+  const code = input.code ? normalizeCode(input.code) : "";
+  if (input.code && code.length < 3) throw new ServiceError("That code is too short.");
+
+  let memberId = input.memberId ?? null;
+  if (memberId) {
+    const [m] = await db.select({ id: members.id }).from(members).where(eq(members.id, memberId)).limit(1);
+    if (!m) throw new ServiceError("Member not found.");
+  } else {
+    if (!splitName(input.name ?? "").firstName) throw new ServiceError("Name is required.");
+    if (input.email && !normalizeEmail(input.email)) throw new ServiceError("That email doesn't look right.");
+  }
+  if (code) {
+    const [taken] = await db.select({ memberId: credentials.memberId }).from(credentials).where(eq(credentials.code, code)).limit(1);
+    if (taken && taken.memberId !== memberId) throw new ServiceError(`Code ${code} already belongs to another member.`);
+  }
+
+  if (!memberId) {
+    const { firstName, lastName } = splitName(input.name ?? "");
+    const created = await createMember(db, { firstName, lastName, email: input.email, phone: input.phone, source: "desk" }, now);
+    memberId = created.id;
+  }
+  await sellPlan(db, memberId, { planId: plan.id, paymentMethod: input.paymentMethod, paymentRef: input.paymentRef }, now);
+  if (code) await addCard(db, memberId, code, now);
+  const result = await checkIn(db, { memberId, method: code ? "scan" : "search" }, now);
+  return { memberId, result };
+}
+
+/** Link a card or paper code to a member, then check them in with it. */
+export async function linkCodeAndCheckIn(db: DB, memberId: string, raw: string, now = new Date()) {
+  const code = await addCard(db, memberId, raw, now);
+  return checkIn(db, { code, method: "typed" }, now);
+}
+
 async function getMembership(db: DB, id: string) {
   const [m] = await db.select().from(memberships).where(eq(memberships.id, id)).limit(1);
   if (!m) throw new ServiceError("Membership not found.");

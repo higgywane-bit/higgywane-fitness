@@ -126,7 +126,10 @@ export function evaluateAccess(ms: MembershipLike[], today: ISODate): AccessDeci
     case "active":
     case "expiring": {
       const d = standing.daysLeft ?? 0;
-      const nudge = d === 0 ? "last-day" : d <= GYM.renewNudgeDays ? "renew-soon" : null;
+      const c = standing.current!;
+      // a day pass ending today isn't a renewal conversation
+      const short = diffDays(c.startsOn, c.endsOn) + 1 <= GYM.renewNudgeDays;
+      const nudge = short ? null : d === 0 ? "last-day" : d <= GYM.renewNudgeDays ? "renew-soon" : null;
       return { allowed: true, standing, nudge };
     }
     case "frozen":

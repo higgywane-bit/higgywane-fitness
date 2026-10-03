@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/admin/page-header";
 
 export const metadata = { title: "New member" };
 
-export default function NewMemberPage() {
+export default async function NewMemberPage({ searchParams }: { searchParams: Promise<{ card?: string }> }) {
+  const { card } = await searchParams;
   return (
     <div className="pb-12">
       <div className="px-4 pt-4 md:px-8 md:pt-6">
@@ -19,7 +20,7 @@ export default function NewMemberPage() {
         <p className="mb-8 text-text-secondary">
           They get a personal QR code straight away. Send them the pass link and they scan in with their phone.
         </p>
-        <MemberForm />
+        <MemberForm initialCard={card?.slice(0, 20)} />
       </div>
     </div>
   );

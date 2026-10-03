@@ -42,10 +42,20 @@ const EMPTY: MemberFormValues = {
 
 const selectClass = "h-12 w-full rounded-2xl border border-hairline-strong bg-surface-2 px-4 text-base text-white";
 
-export function MemberForm({ memberId, initial, onDone }: { memberId?: string; initial?: Partial<MemberFormValues>; onDone?: () => void }) {
+export function MemberForm({
+  memberId,
+  initial,
+  initialCard,
+  onDone,
+}: {
+  memberId?: string;
+  initial?: Partial<MemberFormValues>;
+  initialCard?: string;
+  onDone?: () => void;
+}) {
   const router = useRouter();
   const [v, setV] = useState<MemberFormValues>({ ...EMPTY, ...initial });
-  const [card, setCard] = useState("");
+  const [card, setCard] = useState(initialCard ?? "");
   const [planId, setPlanId] = useState("");
   const [method, setMethod] = useState("qashier");
   const [dupes, setDupes] = useState<{ id: string; name: string; memberNo: number }[]>([]);
@@ -194,11 +204,11 @@ export function MemberForm({ memberId, initial, onDone }: { memberId?: string; i
           </fieldset>
 
           <fieldset>
-            <legend className="mb-3 text-sm font-semibold text-white">Existing card (optional)</legend>
+            <legend className="mb-3 text-sm font-semibold text-white">Membership card (optional)</legend>
             <div className="max-w-sm">
-              <Label htmlFor="card">Glofox card number</Label>
+              <Label htmlFor="card">Card code</Label>
               <Input id="card" autoComplete="off" placeholder="Scan or type the card" value={card} onChange={(e) => setCard(e.target.value)} />
-              <p className="mt-2 text-xs text-text-tertiary">Their old card keeps working alongside the new phone QR.</p>
+              <p className="mt-2 text-xs text-text-tertiary">The card scans them in, alongside their phone QR.</p>
             </div>
           </fieldset>
         </>

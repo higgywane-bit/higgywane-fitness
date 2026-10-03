@@ -68,6 +68,22 @@ export async function deskFeedAction(): Promise<Result<{ feed: FeedItem[]; inTod
   return run(async () => ({ feed: await recentCheckIns(14), inToday: await todayCount() }), false);
 }
 
+export async function quickPassAction(input: svc.QuickPassInput) {
+  return run(async () => {
+    const db = await getDb();
+    const { result } = await svc.quickPass(db, input);
+    return { result, feed: await recentCheckIns(14), inToday: await todayCount() };
+  });
+}
+
+export async function linkCodeAction(memberId: string, code: string) {
+  return run(async () => {
+    const db = await getDb();
+    const result = await svc.linkCodeAndCheckIn(db, memberId, code);
+    return { result, feed: await recentCheckIns(14), inToday: await todayCount() };
+  });
+}
+
 export async function searchMembersAction(q: string): Promise<Result<MemberListRow[]>> {
   return run(() => searchMembers(q), false);
 }

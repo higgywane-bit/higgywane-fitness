@@ -1,22 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import {
-  Camera,
-  CameraOff,
-  Check,
-  CircleAlert,
-  Expand,
-  Keyboard,
-  ScanLine,
-  Search,
-  Shrink,
-  Volume2,
-  VolumeX,
-  X,
-} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { CalendarDays, Camera, CameraOff, CreditCard, Expand, Keyboard, ScanLine, Search, Shrink, Ticket, UserRoundPlus, Volume2, VolumeX } from "lucide-react";
 import { checkInAction, deskFeedAction, searchMembersAction } from "@/app/admin/actions";
 import { CheckInFeed } from "@/components/admin/check-in-feed";
 import { MemberAvatar } from "@/components/admin/member-avatar";
@@ -25,90 +13,97 @@ import { SellPlanDialog, type SellTarget } from "@/components/admin/sell-plan-di
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { Plan } from "@/content/plans";
 import type { FeedItem, MemberListRow } from "@/lib/admin/queries";
-import { daysLeftLabel, expiredLabel } from "@/lib/membership/access";
-import { diffDays, formatDate, formatTime, localDate } from "@/lib/membership/dates";
+import { formatTHB } from "@/lib/format";
+import { formatDate } from "@/lib/membership/dates";
 import type { CheckInMethod, CheckInResult } from "@/lib/membership/service";
 import { cn } from "@/lib/utils";
 import { CameraScanner } from "./camera-scanner";
-
-const ALLOWED_RESET_MS = 7000;
-
-/* Two short tones: rising = in, low = see the desk. */
-function beep(ok: boolean) {
-  try {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const notes = ok ? [880, 1320] : [220, 196];
-    notes.forEach((f, i) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = ok ? "sine" : "square";
-      o.frequency.value = f;
-      const t = ctx.currentTime + i * 0.13;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(ok ? 0.25 : 0.08, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.connect(g).connect(ctx.destination);
-      o.start(t);
-      o.stop(t + 0.13);
-    });
-    setTimeout(() => ctx.close(), 600);
-  } catch {
-    /* no audio: fine */
-  }
-}
+import { LinkCardSheet } from "./link-card";
+import { QuickPassSheet, type DeskUpdate, type QuickKind } from "./quick-pass";
+import { RESULT_MS, ResultOverlay, resultTone } from "./result-overlay";
+import { playDeskSound } from "./sounds";
 
 function isTypingTarget(el: EventTarget | null) {
   const e = el as HTMLElement | null;
   return !!e && (e.tagName === "INPUT" || e.tagName === "TEXTAREA" || e.tagName === "SELECT" || e.isContentEditable);
 }
 
-export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem[]; initialCount: number }) {
+type Sheet = { kind: "quick"; quick: QuickKind } | { kind: "link"; code?: string } | { kind: "sell"; target: SellTarget } | null;
+
+export function FrontDesk({
+  initialFeed,
+  initialCount,
+  plans,
+  promptPayId,
+}: {
+  initialFeed: FeedItem[];
+  initialCount: number;
+  plans: Plan[];
+  promptPayId: string | null;
+}) {
+  const router = useRouter();
   const [result, setResult] = useState<CheckInResult | null>(null);
+  const [sold, setSold] = useState<string | null>(null);
   const [feed, setFeed] = useState(initialFeed);
   const [inToday, setInToday] = useState(initialCount);
   const [pending, startTransition] = useTransition();
   const [sound, setSound] = useState(true);
   const [camera, setCamera] = useState(false);
   const [focused, setFocused] = useState(true);
-  const [sell, setSell] = useState<SellTarget | null>(null);
+  const [sheet, setSheet] = useState<Sheet>(null);
   const [typed, setTyped] = useState("");
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<MemberListRow[]>([]);
   const [fullscreen, setFullscreen] = useState(false);
-  const [sold, setSold] = useState<string | null>(null);
-  const reduce = useReducedMotion();
   const lastMethod = useRef<CheckInMethod>("scan");
-  const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const soundRef = useRef(sound);
   soundRef.current = sound;
 
-  const submit = useCallback((input: { code?: string; memberId?: string; method: CheckInMethod }) => {
-    lastMethod.current = input.method;
-    clearTimeout(resetTimer.current);
-    setSold(null);
-    startTransition(async () => {
-      const res = await checkInAction(input);
-      if (!res.ok) {
-        setResult({ allowed: false, reason: "unknown-code", at: new Date().toISOString(), code: input.code });
-        return;
-      }
-      const r = res.data.result;
-      setResult(r);
-      setFeed(res.data.feed);
-      setInToday(res.data.inToday);
-      if (soundRef.current) beep(r.allowed);
-      if (r.allowed && !r.nudge) resetTimer.current = setTimeout(() => setResult(null), ALLOWED_RESET_MS);
-    });
+  const show = useCallback((r: CheckInResult, soldLine: string | null = null) => {
+    setSold(soldLine);
+    setResult(r);
+    if (soundRef.current) playDeskSound(resultTone(r, !!soldLine));
   }, []);
+
+  const apply = useCallback(
+    (u: DeskUpdate, soldLine: string | null = null) => {
+      setFeed(u.feed);
+      setInToday(u.inToday);
+      show(u.result, soldLine);
+    },
+    [show],
+  );
+
+  // Auto-close: green goes quickly, red stays long enough to act on.
+  useEffect(() => {
+    if (!result) return;
+    const t = setTimeout(() => setResult(null), RESULT_MS[resultTone(result, !!sold)]);
+    return () => clearTimeout(t);
+  }, [result, sold]);
+
+  const submit = useCallback(
+    (input: { code?: string; memberId?: string; method: CheckInMethod }, soldLine: string | null = null) => {
+      lastMethod.current = input.method;
+      startTransition(async () => {
+        const res = await checkInAction(input);
+        if (!res.ok) {
+          show({ allowed: false, reason: "unknown-code", at: new Date().toISOString(), code: input.code });
+          return;
+        }
+        apply(res.data, soldLine);
+      });
+    },
+    [apply, show],
+  );
 
   // USB / Bluetooth scanners type the code and press Enter, like a keyboard.
   useEffect(() => {
     let buffer = "";
     let last = 0;
     function onKey(e: KeyboardEvent) {
-      if (isTypingTarget(e.target) || sell || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isTypingTarget(e.target) || sheet || e.metaKey || e.ctrlKey || e.altKey) return;
       const now = performance.now();
       if (now - last > 1500) buffer = "";
       last = now;
@@ -125,7 +120,7 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [submit, sell]);
+  }, [submit, sheet]);
 
   // Tell staff when the page can't hear the scanner (another window has focus).
   useEffect(() => {
@@ -175,6 +170,10 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
     else document.documentElement.requestFullscreen?.().catch(() => {});
   }
 
+  const price = (id: string) => plans.find((p) => p.id === id)?.price;
+  const dayPrice = price("day-pass");
+  const weekPrice = price("1-week");
+
   return (
     <div className="grid min-h-[calc(100dvh-8rem)] gap-4 px-4 pt-4 pb-6 md:px-8 md:pt-6 lg:min-h-dvh lg:grid-cols-[minmax(0,1fr)_340px] lg:py-6">
       <div className="flex min-w-0 flex-col gap-4">
@@ -194,7 +193,16 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" aria-label={sound ? "Mute sounds" : "Turn sounds on"} aria-pressed={sound} onClick={() => setSound((s) => !s)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={sound ? "Mute sounds" : "Turn sounds on"}
+              aria-pressed={sound}
+              onClick={() => {
+                setSound((s) => !s);
+                if (!sound) playDeskSound("ok");
+              }}
+            >
               {sound ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
             </Button>
             <Button variant="ghost" size="icon" aria-label={camera ? "Turn camera off" : "Scan with camera"} aria-pressed={camera} onClick={() => setCamera((c) => !c)}>
@@ -207,38 +215,23 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
         </div>
 
         {/* stage */}
-        <div className="relative flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-[28px] border border-hairline bg-surface-1">
-          <AnimatePresence mode="wait" initial={false}>
-            {result ? (
-              <motion.div
-                key={result.at}
-                initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-1 flex-col"
-              >
-                <ResultView
-                  r={result}
-                  sold={sold}
-                  onDismiss={() => setResult(null)}
-                  onSell={(t) => setSell(t)}
-                  autoReset={result.allowed && !result.nudge && !reduce}
-                />
-              </motion.div>
-            ) : (
-              <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col">
-                {camera ? (
-                  <div className="mx-auto w-full max-w-xl p-4 md:p-6">
-                    <CameraScanner paused={pending || !!result} onCode={(code) => submit({ code, method: "camera" })} />
-                    <p className="mt-3 text-center text-sm text-text-secondary">Hold the member&apos;s QR code up to the camera.</p>
-                  </div>
-                ) : (
-                  <Idle pending={pending} />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-[28px] border border-hairline bg-surface-1 md:min-h-[380px]">
+          {camera ? (
+            <div className="mx-auto w-full max-w-xl p-4 md:p-6">
+              <CameraScanner paused={pending || !!result || !!sheet} onCode={(code) => submit({ code, method: "camera" })} />
+              <p className="mt-3 text-center text-sm text-text-secondary">Hold the member&apos;s QR code or card up to the camera.</p>
+            </div>
+          ) : (
+            <Idle pending={pending} />
+          )}
+        </div>
+
+        {/* quick actions */}
+        <div className="grid grid-cols-2 gap-2 md:gap-3 2xl:grid-cols-4">
+          <QuickAction icon={Ticket} label="Day pass" sub={dayPrice != null ? formatTHB(dayPrice) : undefined} onClick={() => setSheet({ kind: "quick", quick: "day" })} primary />
+          <QuickAction icon={CalendarDays} label="1–2 week pass" sub={weekPrice != null ? `from ${formatTHB(weekPrice)}` : undefined} onClick={() => setSheet({ kind: "quick", quick: "week" })} />
+          <QuickAction icon={CreditCard} label="Link card" sub="Scan or 6-digit code" onClick={() => setSheet({ kind: "link" })} />
+          <QuickAction icon={UserRoundPlus} label="New member" sub="Full sign-up" href="/admin/members/new" />
         </div>
 
         {/* manual entry */}
@@ -255,7 +248,7 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
               <Keyboard className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-text-tertiary" aria-hidden />
               <Input
                 aria-label="Member code"
-                placeholder="Type member code"
+                placeholder="Type card or member code"
                 value={typed}
                 onChange={(e) => setTyped(e.target.value.toUpperCase())}
                 autoCapitalize="characters"
@@ -322,7 +315,9 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[13px] font-medium text-text-secondary">In today</p>
-            <p className="font-display tabular mt-1 text-[56px] leading-none">{inToday}</p>
+            <motion.p key={inToday} initial={{ y: -6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className="font-display tabular mt-1 text-[56px] leading-none">
+              {inToday}
+            </motion.p>
           </div>
           <Link href="/admin" className="text-sm text-text-secondary hover:text-white">
             Dashboard
@@ -333,14 +328,59 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
         </div>
       </aside>
 
-      {sell ? (
+      <AnimatePresence>
+        {result ? (
+          <ResultOverlay
+            key={result.at}
+            r={result}
+            sold={sold}
+            onDismiss={() => setResult(null)}
+            onSell={(target) => {
+              setResult(null);
+              setSheet({ kind: "sell", target });
+            }}
+            onLinkCard={(code) => {
+              setResult(null);
+              setSheet({ kind: "link", code });
+            }}
+            onNewWithCode={(code) => router.push(`/admin/members/new?card=${encodeURIComponent(code)}`)}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      {sheet?.kind === "quick" ? (
+        <QuickPassSheet
+          kind={sheet.quick}
+          plans={plans}
+          promptPayId={promptPayId}
+          onClose={() => setSheet(null)}
+          onDone={(u) => {
+            setSheet(null);
+            apply(u);
+          }}
+        />
+      ) : null}
+
+      {sheet?.kind === "link" ? (
+        <LinkCardSheet
+          initialCode={sheet.code}
+          onClose={() => setSheet(null)}
+          onDone={(u) => {
+            setSheet(null);
+            apply(u);
+          }}
+        />
+      ) : null}
+
+      {sheet?.kind === "sell" ? (
         <SellPlanDialog
           open
-          onOpenChange={(o) => !o && setSell(null)}
-          member={sell}
+          onOpenChange={(o) => !o && setSheet(null)}
+          member={sheet.target}
           onSold={(info) => {
-            submit({ memberId: sell.id, method: lastMethod.current });
-            setSold(`${info.planName} sold · runs until ${formatDate(info.endsOn)}`);
+            const target = sheet.target;
+            setSheet(null);
+            submit({ memberId: target.id, method: lastMethod.current }, `${info.planName} · until ${formatDate(info.endsOn)}`);
           }}
         />
       ) : null}
@@ -348,203 +388,61 @@ export function FrontDesk({ initialFeed, initialCount }: { initialFeed: FeedItem
   );
 }
 
+function QuickAction({
+  icon: Icon,
+  label,
+  sub,
+  onClick,
+  href,
+  primary,
+}: {
+  icon: typeof Ticket;
+  label: string;
+  sub?: string;
+  onClick?: () => void;
+  href?: string;
+  primary?: boolean;
+}) {
+  const cls = cn(
+    "tap group flex min-h-[76px] items-center gap-3 rounded-[22px] px-4 text-left transition-colors",
+    primary ? "bg-white text-black hover:bg-white/90" : "border border-hairline bg-surface-1 hover:bg-surface-2",
+  );
+  const body = (
+    <>
+      <span className={cn("grid size-11 shrink-0 place-items-center rounded-2xl", primary ? "bg-black text-white" : "bg-surface-3 text-white")}>
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[15px] font-semibold">{label}</span>
+        {sub ? <span className={cn("tabular block truncate text-xs", primary ? "text-black/60" : "text-text-tertiary")}>{sub}</span> : null}
+      </span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {body}
+    </button>
+  );
+}
+
 function Idle({ pending }: { pending: boolean }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="relative grid size-40 place-items-center">
-        <span aria-hidden className="absolute inset-0 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-[40px] border border-white/15" />
+      <div className="relative grid size-36 place-items-center md:size-40">
+        <span aria-hidden className="absolute inset-0 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-[40px] border border-white/15 motion-reduce:animate-none" />
         <span aria-hidden className="absolute inset-3 rounded-[34px] border border-white/10" />
-        <span className="glass grid size-28 place-items-center rounded-[30px]">
-          <ScanLine className={cn("size-12", pending ? "animate-pulse text-red-text" : "text-white")} strokeWidth={1.5} aria-hidden />
+        <span className="glass grid size-24 place-items-center rounded-[30px] md:size-28">
+          <ScanLine className={cn("size-11 md:size-12", pending ? "animate-pulse text-red-text" : "text-white")} strokeWidth={1.5} aria-hidden />
         </span>
       </div>
       <div>
         <p className="text-statement text-[40px] md:text-[56px]">{pending ? "Checking…" : "Scan to check in"}</p>
-        <p className="mt-2 text-text-secondary">Member QR, old Glofox card, or type the code below.</p>
+        <p className="mt-2 text-text-secondary">Card, phone QR, or type the code below.</p>
       </div>
-    </div>
-  );
-}
-
-const DENY_TITLE: Record<string, string> = {
-  expired: "Membership expired",
-  "no-membership": "No membership",
-  frozen: "Membership paused",
-  "not-started": "Not started yet",
-  "unknown-code": "Code not recognised",
-  archived: "Member archived",
-};
-
-function ResultView({
-  r,
-  sold,
-  onDismiss,
-  onSell,
-  autoReset,
-}: {
-  r: CheckInResult;
-  sold: string | null;
-  onDismiss: () => void;
-  onSell: (t: SellTarget) => void;
-  autoReset: boolean;
-}) {
-  const today = localDate(new Date(r.at));
-  const name = r.member ? (r.member.nickname && r.member.nickname !== r.member.name.split(" ")[0] ? `${r.member.name} (${r.member.nickname})` : r.member.name) : null;
-  const first = r.member?.nickname || r.member?.name.split(" ")[0];
-  const tone = r.duplicate && !sold ? "neutral" : r.allowed ? (r.nudge ? "warn" : "ok") : "deny";
-  const sellTarget = r.member ? { id: r.member.id, name: r.member.name, coverEnds: r.coverEnds ?? null } : null;
-
-  const denyDetail = () => {
-    switch (r.reason) {
-      case "expired":
-        return `${r.plan} ${expiredLabel(r.daysSinceExpiry ?? 0).toLowerCase()} (${formatDate(r.endedOn!, today)}).`;
-      case "frozen":
-        return `Paused until ${formatDate(r.frozenUntil!, today)}. Resume it from their profile to let them in.`;
-      case "not-started":
-        return `${r.plan} starts ${formatDate(r.startsOn!, today)}.`;
-      case "unknown-code":
-        return r.code ? `Nobody has code ${r.code}. Find them by name, or link the card on their profile.` : "Try again or find them by name.";
-      case "archived":
-        return "Restore the member from their profile first.";
-      default:
-        return "Sell a day pass or membership to let them in.";
-    }
-  };
-
-  return (
-    <div
-      className={cn(
-        "relative flex flex-1 flex-col",
-        tone === "ok" && "bg-[radial-gradient(120%_80%_at_50%_0%,rgb(52_199_89/0.22),transparent_60%)]",
-        tone === "warn" && "bg-[radial-gradient(120%_80%_at_50%_0%,rgb(245_208_76/0.2),transparent_60%)]",
-        tone === "deny" && "bg-[radial-gradient(120%_80%_at_50%_0%,rgb(225_29_72/0.28),transparent_60%)]",
-      )}
-      role="status"
-      aria-live="assertive"
-    >
-      <Button variant="ghost" size="icon" onClick={onDismiss} aria-label="Dismiss" className="absolute top-3 right-3 z-10">
-        <X className="size-5" />
-      </Button>
-
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 px-5 py-10 text-center md:px-10">
-        <div className="relative">
-          {r.member ? (
-            <MemberAvatar name={r.member.name} photoUrl={r.member.photoUrl} className="size-28 text-[40px] md:size-32" />
-          ) : (
-            <span className="grid size-28 place-items-center rounded-full bg-surface-3 md:size-32">
-              <CircleAlert className="size-12 text-red-text" aria-hidden />
-            </span>
-          )}
-          <span
-            className={cn(
-              "absolute -right-1 -bottom-1 grid size-11 place-items-center rounded-full ring-4 ring-surface-1",
-              tone === "ok" && "bg-success text-black",
-              tone === "warn" && "bg-energy text-black",
-              tone === "deny" && "bg-red text-white",
-              tone === "neutral" && "bg-white text-black",
-            )}
-            aria-hidden
-          >
-            {tone === "deny" ? <X className="size-6" strokeWidth={3} /> : <Check className="size-6" strokeWidth={3} />}
-          </span>
-        </div>
-
-        <div className="max-w-2xl">
-          <p className={cn("text-sm font-bold tracking-[0.2em] uppercase", tone === "deny" ? "text-red-text" : tone === "warn" ? "text-energy" : tone === "ok" ? "text-success" : "text-text-secondary")}>
-            {sold ? "Renewed · welcome back" : r.duplicate ? "Already checked in" : r.allowed ? "Welcome back" : DENY_TITLE[r.reason ?? ""]}
-          </p>
-          <h2 className="text-statement mt-2 text-[48px] break-words md:text-[76px]">{r.allowed ? first : (name ?? "Unknown")}</h2>
-          {r.member ? (
-            <p className="mt-2 text-text-secondary">
-              {r.allowed ? `${name} · ` : ""}#{r.member.memberNo}
-              {r.plan && r.allowed ? ` · ${r.plan}` : ""}
-            </p>
-          ) : null}
-          {!r.allowed ? <p className="mx-auto mt-4 max-w-md text-lg text-white/90">{denyDetail()}</p> : null}
-          {sold ? (
-            <p className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-success/15 px-4 py-2 text-sm font-semibold text-success">
-              <Check className="size-4" strokeWidth={3} aria-hidden />
-              {sold}
-            </p>
-          ) : null}
-        </div>
-
-        {r.allowed ? (
-          <dl className="grid w-full max-w-2xl grid-cols-3 gap-2 md:gap-3">
-            <Stat
-              label={r.daysLeft === 0 ? "Ends" : "Days left"}
-              value={r.daysLeft === 0 ? "Today" : String(r.daysLeft)}
-              sub={`until ${formatDate(r.coverEnds!, today)}`}
-              warn={!!r.nudge}
-            />
-            <Stat label="This month" value={String(r.visitsThisMonth ?? 0)} sub={r.visitsThisMonth === 1 ? "visit" : "visits"} />
-            {r.pt ? (
-              <Stat label="PT left" value={String(r.pt.sessionsLeft)} sub={`until ${formatDate(r.pt.endsOn, today)}`} />
-            ) : (
-              r.duplicate ? (
-                <Stat label="Checked in" value="Today" sub={r.previousVisit ? `at ${formatTime(new Date(r.previousVisit))}` : ""} />
-              ) : (
-                <LastVisit at={r.previousVisit} today={today} />
-              )
-            )}
-          </dl>
-        ) : null}
-
-        {r.allowed && r.nudge ? (
-          <div className="flex w-full max-w-2xl flex-wrap items-center justify-between gap-3 rounded-2xl bg-energy/12 p-4 text-left ring-1 ring-energy/30 ring-inset">
-            <p className="font-semibold text-energy">{daysLeftLabel(r.daysLeft ?? 0)}. Ask {first} about renewing.</p>
-            {sellTarget ? (
-              <Button variant="inverse" onClick={() => onSell(sellTarget)}>
-                Renew now
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {!r.allowed ? (
-          <div className="flex flex-wrap justify-center gap-2">
-            {sellTarget && r.reason !== "archived" && r.reason !== "frozen" ? (
-              <Button size="lg" onClick={() => onSell(sellTarget)}>
-                {r.reason === "expired" ? "Renew membership" : "Sell a plan"}
-              </Button>
-            ) : null}
-            {r.member ? (
-              <Button asChild size="lg" variant="outline">
-                <Link href={`/admin/members/${r.member.id}`}>Open profile</Link>
-              </Button>
-            ) : (
-              <Button asChild size="lg" variant="outline">
-                <Link href="/admin/members/new">New member</Link>
-              </Button>
-            )}
-          </div>
-        ) : null}
-      </div>
-
-      {autoReset ? (
-        <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 origin-left animate-[desk-reset_7s_linear_forwards] bg-success/70" />
-      ) : null}
-    </div>
-  );
-}
-
-function LastVisit({ at, today }: { at?: string; today: string }) {
-  if (!at) return <Stat label="Last visit" value="New" sub="first visit" />;
-  const day = localDate(new Date(at));
-  const gap = diffDays(day, today);
-  return gap === 0 ? (
-    <Stat label="Last visit" value="Today" sub={formatTime(new Date(at))} />
-  ) : (
-    <Stat label="Last visit" value={String(gap)} sub={`${gap === 1 ? "day" : "days"} ago · ${formatDate(day, today)}`} />
-  );
-}
-
-function Stat({ label, value, sub, warn }: { label: string; value: string; sub: string; warn?: boolean }) {
-  return (
-    <div className="glass rounded-2xl px-3 py-4 md:px-4">
-      <dt className="text-xs font-medium text-text-secondary">{label}</dt>
-      <dd className={cn("font-display tabular mt-1 text-[40px] leading-none md:text-[56px]", warn && "text-energy")}>{value}</dd>
-      <dd className="mt-1.5 truncate text-xs text-text-tertiary">{sub}</dd>
     </div>
   );
 }

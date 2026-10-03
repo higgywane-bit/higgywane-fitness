@@ -244,9 +244,10 @@
 @keyframes dialog-out {
   to { opacity: 0; transform: translate(-50%, -49%) scale(0.98); }
 }
-@keyframes desk-reset {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
+@keyframes desk-ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-16deg); }
+  20%, 40% { transform: rotate(16deg); }
 }
 @keyframes sheet-in {
   from { transform: translateX(100%); }

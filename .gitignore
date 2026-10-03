@@ -46,3 +46,6 @@ next-env.d.ts
 /playwright-report/
 .data/
 .playwright-mcp/
+
+# master pack output (npm run pack:lovable)
+/pack/

@@ -242,7 +242,7 @@ Who did it: every action runs inside `withActor(staffId)` (`lib/staff/context.ts
 
 Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's server code as-is, so plan the move as **keep the data and rules, rebuild the screens where it helps.**
 
-**Fastest start: the master pack.** `npm run pack` builds `pack/superfit-master-pack.zip`: the full app, a `core/` folder of every pure rule (drop it into the Lovable project's `src/`), the database as one `supabase/schema.sql`, and `LOVABLE_PROMPT.md`. It doesn't touch any other repo or Lovable project.
+**Fastest start: the master pack.** `npm run pack:lovable` builds `pack/superfit-master-pack.zip`: the full app, a `core/` folder of every pure rule (drop it into the Lovable project's `src/`), the database as one `supabase/schema.sql`, and `LOVABLE_PROMPT.md`. It doesn't touch any other repo or Lovable project.
 
 **Keep exactly as-is**
 1. **The database.** Create a Supabase project (Singapore region), run the SQL files in `drizzle/` in order, then set `DATABASE_URL` here. This app and Lovable then share live data from day one, so you can switch screen by screen instead of all at once.

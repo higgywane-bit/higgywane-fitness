@@ -88,7 +88,9 @@ for (const t of PURE_TESTS) {
   const p = path.join(root, "tests/unit", t);
   if (!existsSync(p)) continue;
   const src = readFileSync(p, "utf8");
-  if (FORBIDDEN.some((re) => re.test(src)) || /@\/lib\/db/.test(src)) continue;
+  if (FORBIDDEN.some((re) => re.test(src))) continue;
+  const deps = [...src.matchAll(/from\s+["'](@\/[^"']+)["']/g)].map((m) => path.relative(root, resolve(m[1], p)));
+  if (!deps.every((d) => coreFiles.includes(d))) continue;
   cpSync(p, path.join(stage, "core/tests", t));
 }
 

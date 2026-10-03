@@ -10,5 +10,5 @@ export default defineConfig({
     },
   },
   // Unit tests never touch the dev server's local database folder.
-  test: { include: ["tests/unit/**/*.test.ts"], environment: "node", env: { PGLITE_DIR: "memory://" } },
+  test: { include: ["tests/unit/**/*.test.ts"], environment: "node", env: { PGLITE_DIR: "memory://", SEED_DEMO: "0" } },
 });

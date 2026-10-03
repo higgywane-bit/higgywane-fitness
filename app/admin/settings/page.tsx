@@ -56,14 +56,14 @@ export default async function SettingsPage() {
               }
             />
             <Status
-              on={!!process.env.ADMIN_PASSCODE}
-              label={process.env.ADMIN_PASSCODE ? "Admin passcode: on" : "Admin passcode: off"}
+              on={!!process.env.ADMIN_EMAIL && !!process.env.ADMIN_PASSWORD}
+              label={process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? `Admin sign-in: ${process.env.ADMIN_EMAIL}` : "Admin sign-in: off"}
               detail={
-                process.env.ADMIN_PASSCODE ? (
-                  "Staff enter the passcode once per device."
+                process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? (
+                  "Sign in once per device with the Superfit email. Staff then pick who's working with their PIN."
                 ) : (
                   <>
-                    Anyone with the link can open admin. Set <Code>ADMIN_PASSCODE</Code> before real member data goes online. Staff logins come later.
+                    Anyone with the link can open admin. Set <Code>ADMIN_EMAIL</Code> and <Code>ADMIN_PASSWORD</Code> before real member data goes online.
                   </>
                 )
               }

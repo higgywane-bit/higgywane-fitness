@@ -4,13 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import * as D from "@radix-ui/react-dialog";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowUpRight, LogOut, Menu, X } from "lucide-react";
+import { logoutAction } from "@/app/admin-login/actions";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV, ADMIN_NAV_GROUPS, isAdminActive, MOBILE_TABS } from "./nav";
 import { StaffSwitcher, type Acting, type SwitcherStaff } from "./staff-switcher";
 
-export function AdminShell({ children, staff, acting, badges }: { children: React.ReactNode; staff: SwitcherStaff[]; acting: Acting; badges: Record<string, number> }) {
+export function AdminShell({
+  children,
+  staff,
+  acting,
+  badges,
+  signedIn,
+}: {
+  children: React.ReactNode;
+  staff: SwitcherStaff[];
+  acting: Acting;
+  badges: Record<string, number>;
+  signedIn: boolean;
+}) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
   const tabs = MOBILE_TABS.map((h) => ADMIN_NAV.find((n) => n.href === h)!);
@@ -63,6 +76,7 @@ export function AdminShell({ children, staff, acting, badges }: { children: Reac
             View website
             <ArrowUpRight className="size-4" aria-hidden />
           </Link>
+          {signedIn ? <SignOut /> : null}
         </div>
       </aside>
 
@@ -122,6 +136,11 @@ export function AdminShell({ children, staff, acting, badges }: { children: Reac
                   </div>
                   <D.Description className="sr-only">All admin sections</D.Description>
                   <div className="pb-6">{groups(() => setMore(false))}</div>
+                  {signedIn ? (
+                    <div className="border-t border-hairline pt-3 pb-6">
+                      <SignOut />
+                    </div>
+                  ) : null}
                 </D.Content>
               </D.Portal>
             </D.Root>
@@ -129,5 +148,16 @@ export function AdminShell({ children, staff, acting, badges }: { children: Reac
         </ul>
       </nav>
     </div>
+  );
+}
+
+function SignOut() {
+  return (
+    <form action={logoutAction}>
+      <button type="submit" className="tap flex h-9 w-full items-center justify-between rounded-xl px-3 text-sm text-text-tertiary hover:bg-surface-2 hover:text-white">
+        Sign out
+        <LogOut className="size-4" aria-hidden />
+      </button>
+    </form>
   );
 }

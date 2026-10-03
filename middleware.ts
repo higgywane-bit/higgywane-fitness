@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE, passcodeToken } from "@/lib/admin-gate";
+import { ADMIN_SESSION_COOKIE, adminAuthConfig, verifySession } from "@/lib/admin-auth";
 
 export async function middleware(req: NextRequest) {
-  const passcode = process.env.ADMIN_PASSCODE;
-  if (!passcode) return NextResponse.next();
-  const cookie = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (cookie && cookie === (await passcodeToken(passcode))) return NextResponse.next();
+  const cfg = adminAuthConfig();
+  // No account configured (local laptop): admin stays open.
+  if (!cfg) return NextResponse.next();
+  if (await verifySession(cfg, req.cookies.get(ADMIN_SESSION_COOKIE)?.value)) return NextResponse.next();
   const url = req.nextUrl.clone();
   url.pathname = "/admin-login";
   url.search = `?next=${encodeURIComponent(req.nextUrl.pathname + req.nextUrl.search)}`;

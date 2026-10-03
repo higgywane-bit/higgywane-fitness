@@ -114,7 +114,7 @@ Members who already renewed, opted out, have no email or are archived are skippe
 
 ## 7. Security and privacy
 
-- `/admin` is open by default for easy setup. **Before real member data goes online, set `ADMIN_PASSCODE`**: staff enter it once per device. Proper staff logins (owner / front desk roles) come with the member accounts.
+- `/admin` is open by default for easy setup. **Before real member data goes online, set `ADMIN_EMAIL` and `ADMIN_PASSWORD`**: the Superfit email signs in once per device (30-day session), then staff pick who's working with their PIN. Every admin server action re-checks the session, not just the middleware.
 - Pass links are secret 144-bit tokens, `noindex`, and show only name, member number, plan status and the QR.
 - Webhook and cron routes need their own secrets.
 - Member data is personal data under Thailand's PDPA: keep the database in the Singapore region, collect only what's on the form, and archive (or delete on request) members who leave.

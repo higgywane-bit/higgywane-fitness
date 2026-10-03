@@ -208,7 +208,7 @@ Plans and prices are not in the database: they come from `content/pricing.json` 
 | **Glofox reports** | Any CSV → Insights | none needed | Free-form; analyser adapts |
 | **Reminder emails** | Worked out and logged | Resend (`RESEND_API_KEY`, `EMAIL_FROM`) | Daily `GET /api/cron/reminders` with `Authorization: Bearer $CRON_SECRET` |
 | **Database** | PGlite (local) | Supabase Postgres (`DATABASE_URL`) | `npm run db:migrate` |
-| **Admin access** | Open, or `ADMIN_PASSCODE` | Supabase Auth with roles | — |
+| **Admin access** | Open, or email sign-in (`ADMIN_EMAIL` + `ADMIN_PASSWORD`) | Supabase Auth with roles | — |
 | **Payments** | Mock (cafe checkout) | Opn / 2C2P / Qashier | `lib/payments/types.ts` `PaymentProvider` |
 
 ### Everything the admin can do (the API surface)
@@ -274,7 +274,7 @@ Lovable builds React (Vite) + Supabase apps. It won't run this Next.js app's ser
 
 **Phase 1: go live at the desk (now)**
 - [ ] Owner answers the open questions below
-- [ ] Supabase project + `DATABASE_URL`, `ADMIN_PASSCODE` set, deploy
+- [ ] Supabase project + `DATABASE_URL`, `ADMIN_EMAIL` + `ADMIN_PASSWORD` set, deploy
 - [ ] Test-import the Glofox client list, spot-check 10 members, remove demo data
 - [ ] Confirm the scanner reads phone QR codes (or buy a 2D imager)
 - [ ] Switch-over day: re-import, start checking in on Superfit, send passes

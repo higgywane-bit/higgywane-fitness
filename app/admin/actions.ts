@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { actingStaffId } from "@/lib/staff/session";
+import { NotSignedInError, requireAdmin } from "@/lib/admin-session";
 import { withActor } from "@/lib/staff/context";
 import { getDb } from "@/lib/db";
 import { searchMembers, recentCheckIns, todayCount, type FeedItem, type MemberListRow } from "@/lib/admin/queries";
@@ -44,11 +45,12 @@ type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 /** Every admin action runs as the staff member currently working (for the activity log). */
 async function run<T>(fn: () => Promise<T>, revalidate = true): Promise<Result<T>> {
   try {
+    await requireAdmin();
     const data = await withActor(await actingStaffId(), fn);
     if (revalidate) revalidatePath("/admin", "layout");
     return { ok: true, data };
   } catch (err) {
-    if (err instanceof svc.ServiceError) return { ok: false, error: err.message };
+    if (err instanceof svc.ServiceError || err instanceof NotSignedInError) return { ok: false, error: err.message };
     console.error(err);
     return { ok: false, error: "Something went wrong. Try again." };
   }
@@ -329,6 +331,7 @@ export async function clockAction(staffId: string, direction: "in" | "out") {
 /** Switch who's working on this device. Staff with a PIN must enter it. */
 export async function switchStaffAction(staffId: string | null, pin: string) {
   try {
+    await requireAdmin();
     if (!staffId) {
       await setActingStaff(null);
       revalidatePath("/admin", "layout");
@@ -339,7 +342,7 @@ export async function switchStaffAction(staffId: string | null, pin: string) {
     revalidatePath("/admin", "layout");
     return { ok: true as const, data: { name: s.name } };
   } catch (err) {
-    if (err instanceof svc.ServiceError) return { ok: false as const, error: err.message };
+    if (err instanceof svc.ServiceError || err instanceof NotSignedInError) return { ok: false as const, error: err.message };
     return { ok: false as const, error: "Something went wrong. Try again." };
   }
 }

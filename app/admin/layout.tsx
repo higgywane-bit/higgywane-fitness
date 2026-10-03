@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { adminAuthConfig } from "@/lib/admin-auth";
 import { getDb, t } from "@/lib/db";
 import { listStaff, openEntry } from "@/lib/staff/service";
 import { actingStaffId } from "@/lib/staff/session";
@@ -28,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <AdminShell
       staff={staff.map((s) => ({ id: s.id, name: s.name, role: s.role, hasPin: !!s.pinHash, color: s.color }))}
       acting={me ? { id: me.id, name: me.name, clockedInAt: open?.clockIn.toISOString() ?? null } : null}
+      signedIn={!!adminAuthConfig()}
       badges={{ "/admin/cafe": orders.n, "/admin/coaching": bookings.n, "/admin/leads": leadsNew.n }}
     >
       {children}

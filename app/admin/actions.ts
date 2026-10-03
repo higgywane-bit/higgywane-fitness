@@ -9,7 +9,7 @@ import { searchMembers, recentCheckIns, todayCount, type FeedItem, type MemberLi
 import { planImport, removeDemoData, runImport, type ImportPlan } from "@/lib/membership/import";
 import type { ImportMapping } from "@/lib/membership/glofox";
 import * as svc from "@/lib/membership/service";
-import { importSales } from "@/lib/sales/service";
+import { importSales, recordPlanSale } from "@/lib/sales/service";
 import { getMailer } from "@/lib/email";
 import { sendReminders } from "@/lib/membership/reminder-service";
 import { saveLayout } from "@/lib/dashboard/layout";
@@ -42,6 +42,7 @@ import { saveTargets, type Targets } from "@/lib/performance/targets";
 import type { CatalogSection } from "@/lib/catalog";
 import { resetCatalogSection, saveCatalogSection } from "@/lib/catalog/server";
 import { saveImage } from "@/lib/media/service";
+import { ringUp, type TillInput } from "@/lib/pos/service";
 import { logActivity } from "@/lib/membership/service";
 
 const CATALOG_LABELS: Record<CatalogSection, string> = {
@@ -110,7 +111,7 @@ export async function createMemberAction(input: svc.MemberInput & { cardCode?: s
   return run(async () => {
     const db = await getDb();
     const member = await svc.createMember(db, input);
-    if (input.sell?.planId) await svc.sellPlan(db, member.id, input.sell);
+    if (input.sell?.planId) await recordPlanSale(db, await svc.sellPlan(db, member.id, input.sell));
     return { id: member.id };
   });
 }
@@ -146,7 +147,9 @@ export async function revokeCredentialAction(credentialId: string) {
 
 export async function sellPlanAction(memberId: string, input: svc.SellInput) {
   return run(async () => {
-    const m = await svc.sellPlan(await getDb(), memberId, input);
+    const db = await getDb();
+    const m = await svc.sellPlan(db, memberId, input);
+    await recordPlanSale(db, m);
     return { startsOn: m.startsOn, endsOn: m.endsOn, planName: m.planName };
   });
 }
@@ -403,4 +406,10 @@ export async function resetCatalogAction(section: CatalogSection) {
 export async function uploadImageAction(input: { dataUrl: string; width?: number; height?: number; alt?: string }) {
   if (input.dataUrl.length > 3_000_000) return { ok: false as const, error: "That photo is too big (2 MB max)." };
   return run(async () => saveImage(await getDb(), input), false);
+}
+
+/* ── Till ─────────────────────────────────────────────────── */
+
+export async function ringUpAction(input: TillInput) {
+  return run(async () => ringUp(await getDb(), input));
 }

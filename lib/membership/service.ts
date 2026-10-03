@@ -13,6 +13,7 @@ import {
   type DenyReason,
 } from "./access";
 import { currentActor } from "@/lib/staff/context";
+import { recordPlanSale } from "@/lib/sales/service";
 import { generateAccessCode, generatePassToken, normalizeCode } from "./codes";
 import { addDays, diffDays, isISODate, localDate, type ISODate } from "./dates";
 
@@ -396,7 +397,8 @@ export async function quickPass(db: DB, input: QuickPassInput, now = new Date())
     const created = await createMember(db, { firstName, lastName, email: input.email, phone: input.phone, source: "desk" }, now);
     memberId = created.id;
   }
-  await sellPlan(db, memberId, { planId: plan.id, paymentMethod: input.paymentMethod, paymentRef: input.paymentRef }, now);
+  const sold = await sellPlan(db, memberId, { planId: plan.id, paymentMethod: input.paymentMethod, paymentRef: input.paymentRef }, now);
+  await recordPlanSale(db, sold, now);
   if (code) await addCard(db, memberId, code, now);
   const result = await checkIn(db, { memberId, method: code ? "scan" : "search" }, now);
   return { memberId, result };

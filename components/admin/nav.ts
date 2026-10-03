@@ -11,6 +11,7 @@ import {
   ReceiptText,
   ScanLine,
   Settings2,
+  ShoppingBag,
   IdCard,
   TrendingUp,
   UserRoundPlus,
@@ -27,6 +28,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: "/admin", label: "Dashboard", short: "Home", icon: LayoutDashboard },
       { href: "/admin/check-in", label: "Check-in", icon: ScanLine },
+      { href: "/admin/till", label: "Till", icon: ShoppingBag },
       { href: "/admin/cafe", label: "Cafe orders", short: "Cafe", icon: Coffee },
     ],
   },
@@ -69,7 +71,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 ];
 
 /** Bottom tabs on phones; everything else sits behind "More". */
-export const MOBILE_TABS = ["/admin", "/admin/check-in", "/admin/members", "/admin/cafe"];
+export const MOBILE_TABS = ["/admin", "/admin/check-in", "/admin/till", "/admin/members"];
 
 export const ADMIN_NAV: AdminNavItem[] = ADMIN_NAV_GROUPS.flatMap((g) => g.items);
 

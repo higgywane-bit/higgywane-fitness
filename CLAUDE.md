@@ -8,6 +8,7 @@ Goal: the cleanest, most premium, most interactive gym site possible — app-lik
 - `content/pricing.json` — real prices (memberships, PT, cafe) supplied by the owner. Source of truth; never hard-code prices in components.
 - `docs/ADMIN-PLAN.md` — admin blueprint: modules, dashboard module catalogue, metric definitions, data model, integration contracts, Lovable handoff, roadmap.
 - `docs/MEMBERSHIP.md` — the membership system / admin (`/admin`) that replaces Glofox: check-in, members, Glofox import, Qashier sales, reminders.
+- `docs/CUSTOMER-APP.md` — the members' app (sign in, digital pass, membership, PT, menu) and how app accounts link to members. Pass and status come from `lib/customer/pass.ts`; linking rules live in `lib/customer/link.ts` (copied verbatim to `supabase/functions/_shared/link.ts`).
 - `brand/reference/` — logo, the "SUPERCOACH TEAM" poster (coaches Bella, Nicha, Aun, Poom), and the owner's favourite font (Avenir Next LT Pro Heavy Condensed).
 
 ## Priorities

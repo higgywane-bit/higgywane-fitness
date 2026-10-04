@@ -1,0 +1,540 @@
+<title>Superfit Members App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;600;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+/* Layout: one phone-width app column (the real thing), with a handoff notes rail beside it on desktop and below it on phones. Single dark look, matching the Superfit admin. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #0e0e10;
+  --surface-2: #17171a;
+  --line: #27272b;
+  --fg: #ffffff;
+  --muted: #9b9ba3;
+  --dim: #6c6c74;
+  --red: #e5194d;
+  --red-ink: #ff4d75;
+  --ok: #34d063;
+  --ok-bg: #0f2a18;
+  --warn: #f5a524;
+  --warn-bg: #2e2209;
+  --deny-bg: #2e0d16;
+  --protein: #3f9cff;
+  --carbs: #f7c948;
+  --fat: #ff5a7a;
+  --font-display: "Barlow Condensed", "Noto Sans Thai", "Arial Narrow", sans-serif;
+  --font-body: "Inter", "Noto Sans Thai", system-ui, -apple-system, sans-serif;
+  --r-card: 24px;
+  --r-pill: 999px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font-body); font-size: 16px; line-height: 1.5; padding-inline: 16px; padding-block: 16px 32px; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--red-ink); outline-offset: 2px; }
+svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.stage { display: grid; gap: 24px; justify-content: center; grid-template-columns: minmax(0, 430px); }
+@media (min-width: 1024px) { .stage { grid-template-columns: 430px minmax(0, 380px); align-items: start; } .notes { position: sticky; top: 16px; } }
+
+.picker { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.picker button { flex: none; padding: 10px 16px; min-height: 44px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--muted); font-weight: 600; font-size: 14px; }
+.picker button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+.phone { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: 36px; overflow: hidden; min-height: 760px; display: flex; flex-direction: column; }
+@media (max-width: 479px) { .phone { border: 0; border-radius: 0; margin-inline: -16px; } }
+
+/* header, like the admin */
+.top { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 5; }
+.logo { display: flex; align-items: center; gap: 4px; font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: -0.02em; line-height: 1; margin-right: auto; }
+.logo svg { width: 26px; height: 26px; fill: var(--fg); }
+.lang { display: flex; padding: 3px; border: 1px solid var(--line); border-radius: 14px; }
+.lang button { min-width: 44px; min-height: 36px; padding: 0 10px; border-radius: 11px; font-weight: 600; font-size: 14px; color: var(--muted); }
+.lang button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: linear-gradient(140deg, #3a3a40, #1b1b1f); border: 1px solid var(--line); }
+
+main { flex: 1; padding: 24px 16px 120px; display: grid; gap: 16px; align-content: start; }
+.eyebrow { color: var(--red-ink); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+.label { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; line-height: 0.95; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: 52px; }
+h2 { font-size: 36px; }
+h3 { font-size: 26px; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.head { display: grid; gap: 6px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.between { justify-content: space-between; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.inset { background: var(--surface-2); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 6px; }
+.pill { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: var(--r-pill); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.pill.deny { color: var(--red-ink); background: var(--deny-bg); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 24px; border-radius: var(--r-pill); font-weight: 600; font-size: 17px; }
+.btn.primary { background: var(--red); color: #fff; }
+.btn.light { background: var(--fg); color: var(--bg); }
+.btn.ghost { background: var(--surface-2); border: 1px solid var(--line); }
+.btn.block { width: 100%; }
+.btn:active, .tap:active { transform: scale(0.98); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: grid; gap: 2px; min-width: 0; }
+.stat b { font-family: var(--font-display); font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.dl { display: grid; gap: 4px; }
+.dl dd { margin: 0; font-size: 20px; font-variant-numeric: tabular-nums; }
+.list { display: grid; border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; }
+.list > * { padding: 16px 20px; display: flex; align-items: center; gap: 12px; justify-content: space-between; background: var(--surface); }
+.list > * + * { border-top: 1px solid var(--line); }
+.list small { color: var(--muted); font-size: 14px; }
+
+/* bottom nav: Check-in / Members style, five tabs with a raised pass button */
+.nav { position: sticky; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; background: rgba(0,0,0,0.92); backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding: 8px 4px calc(10px + env(safe-area-inset-bottom, 0px)); margin-top: auto; }
+.nav button { display: grid; justify-items: center; gap: 4px; min-height: 52px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.nav button[aria-current="page"] { color: var(--red-ink); }
+.nav .passbtn span.disc { width: 58px; height: 58px; margin-top: -26px; border-radius: 50%; background: var(--red); color: #fff; display: grid; place-items: center; box-shadow: 0 8px 24px rgba(229, 25, 77, 0.45); border: 4px solid var(--bg); }
+.nav .passbtn[aria-current="page"] { color: var(--fg); }
+
+/* sign-in */
+.signin { padding: 32px 20px 40px; display: grid; gap: 28px; align-content: start; flex: 1; background: radial-gradient(120% 60% at 100% 0%, rgba(229,25,77,0.22), transparent 60%), var(--bg); }
+.signin h1 { font-size: 64px; }
+.auth { display: grid; gap: 12px; }
+.auth .btn { width: 100%; justify-content: flex-start; padding-left: 22px; }
+.auth .btn svg { width: 22px; height: 22px; }
+.auth .btn .grow { flex: 1; text-align: center; margin-right: 32px; }
+.field { display: grid; gap: 8px; }
+.field input { min-height: 56px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); font: inherit; font-size: 17px; padding: 0 18px; width: 100%; }
+
+/* pass */
+.pass { position: relative; border-radius: 28px; padding: 22px; display: grid; gap: 18px; justify-items: center; text-align: center; background: linear-gradient(160deg, #1b1b1f, #0b0b0d 55%); border: 1px solid var(--line); overflow: hidden; isolation: isolate; }
+.pass::before { content: ""; position: absolute; inset: -40%; z-index: -1; background: conic-gradient(from 0deg, transparent 0 70%, rgba(229,25,77,0.35) 80%, transparent 90%); animation: spin 6s linear infinite; }
+.pass::after { content: ""; position: absolute; inset: 1px; z-index: -1; border-radius: 27px; background: linear-gradient(160deg, #18181c, #0b0b0d 60%); }
+@keyframes spin { to { transform: rotate(1turn); } }
+.photo { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-size: 44px; font-weight: 800; background: linear-gradient(140deg, #e5194d, #7a0f2b); border: 4px solid var(--bg); box-shadow: 0 0 0 2px var(--ok); }
+.photo.expired { box-shadow: 0 0 0 2px var(--red-ink); }
+.codebox { background: #fff; color: #000; border-radius: 22px; padding: 18px; width: 100%; display: grid; gap: 10px; justify-items: center; }
+.codebox .qr { width: 220px; height: 220px; }
+.codebox .qr svg { width: 100%; height: 100%; display: block; }
+.codebox svg.barcode { width: 100%; max-width: 280px; height: 64px; }
+.codebox .digits { font-family: var(--font-display); font-weight: 800; font-size: 40px; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; line-height: 1; }
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.live i { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+
+/* ring */
+.ring { --p: 0.2; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; flex: none; background: conic-gradient(var(--ok) calc((1 - var(--p)) * 1turn), var(--surface-2) 0); }
+.ring.warn { background: conic-gradient(var(--warn) calc((1 - var(--p)) * 1turn), var(--surface-2) 0); }
+.ring > div { width: 74px; height: 74px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; text-align: center; line-height: 1; }
+.ring b { font-family: var(--font-display); font-size: 30px; }
+.ring small { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.1em; }
+.bar { height: 8px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--ok); border-radius: 8px; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dots i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--protein); }
+.dots i.used { background: var(--protein); opacity: 0.35; border-color: transparent; }
+
+/* product cards, like the Till */
+.cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cats button { display: grid; justify-items: center; gap: 6px; padding: 14px 4px; min-height: 80px; border-radius: 20px; border: 1px solid var(--line); font-family: var(--font-display); font-weight: 800; font-size: 16px; text-transform: uppercase; color: var(--muted); }
+.cats button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); border-color: #3a3a40; }
+.product { position: relative; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 8px; padding: 20px; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--surface); overflow: hidden; min-height: 300px; }
+.product .copy { display: grid; gap: 12px; align-content: start; position: relative; z-index: 1; }
+.product h3 { font-size: 34px; }
+.macros { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.macro { border: 1px solid var(--line); border-radius: 16px; padding: 8px 10px; background: rgba(14,14,16,0.85); display: grid; line-height: 1.15; }
+.macro b { display: flex; align-items: center; gap: 4px; font-size: 18px; font-variant-numeric: tabular-nums; }
+.macro b svg { width: 15px; height: 15px; }
+.macro span { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.12em; }
+.can { align-self: stretch; border-radius: 18px; position: relative; display: grid; place-items: center; overflow: hidden; }
+.can .label-v { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--font-display); font-weight: 800; font-size: 46px; color: rgba(255,255,255,0.9); letter-spacing: -0.02em; }
+.add { position: absolute; right: 16px; bottom: 16px; width: 52px; height: 52px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; z-index: 2; }
+.price { font-family: var(--font-display); font-size: 24px; font-weight: 800; }
+.mini { display: grid; grid-auto-flow: column; grid-auto-columns: 72%; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; scrollbar-width: none; }
+.mini > * { scroll-snap-align: start; }
+.mini .product { min-height: 0; grid-template-columns: 1fr; padding: 16px; }
+.mini .product h3 { font-size: 26px; }
+
+/* coaches */
+.coach { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: center; }
+.portrait { width: 96px; height: 120px; border-radius: 18px; display: grid; place-items: end start; padding: 10px; font-family: var(--font-display); font-weight: 800; font-size: 40px; line-height: 0.8; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 6px 12px; border-radius: var(--r-pill); background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice button { min-height: 44px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; }
+.choice button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* sheet + toast */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 20; display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: var(--surface); border-top: 1px solid var(--line); border-radius: 28px 28px 0 0; padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 18px; max-height: 88%; overflow-y: auto; animation: up 0.28s cubic-bezier(.2,.8,.2,1); }
+.sheet .grab { width: 44px; height: 5px; border-radius: 5px; background: var(--line); justify-self: center; }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } }
+.toast { position: absolute; left: 16px; right: 16px; top: 76px; z-index: 30; padding: 14px 18px; border-radius: 18px; background: var(--ok-bg); color: var(--ok); border: 1px solid rgba(52,208,99,0.3); font-weight: 600; display: flex; gap: 10px; align-items: center; }
+
+/* notes rail */
+.notes { display: grid; gap: 14px; align-content: start; }
+.notes .card { gap: 12px; }
+.notes h2 { font-size: 30px; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--muted); font-size: 15px; }
+.notes code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: var(--fg); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; overflow-wrap: anywhere; }
+.notes .eyebrow { font-size: 12px; }
+.example { font-size: 13px; color: var(--dim); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pass::before, .live i, .sheet { animation: none; }
+}
+</style>
+
+<div class="stage">
+  <div style="display:grid; gap:12px; min-width:0">
+    <nav class="picker" aria-label="Preview screens" id="picker"></nav>
+    <div class="phone" id="phone">
+      <header class="top" id="top">
+        <div class="logo" aria-label="Superfit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 8.7l7.1-.6z"/></svg>superfit</div>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" data-lang="en" aria-pressed="true">EN</button>
+          <button type="button" data-lang="th" aria-pressed="false">ไทย</button>
+        </div>
+        <button type="button" class="avatar" id="avatarBtn" aria-label="Profile">MS</button>
+      </header>
+      <div id="screen" style="display:contents"></div>
+      <nav class="nav" id="nav" aria-label="Main">
+        <button type="button" data-go="home"><svg class="i" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg><span data-t="nav.home">Home</span></button>
+        <button type="button" data-go="menu"><svg class="i" viewBox="0 0 24 24"><path d="M10 2v2M14 2v2M6 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/></svg><span data-t="nav.menu">Menu</span></button>
+        <button type="button" data-go="pass" class="passbtn"><span class="disc"><svg class="i" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg></span><span data-t="nav.pass">Check-in</span></button>
+        <button type="button" data-go="pt"><svg class="i" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg><span data-t="nav.pt">PT</span></button>
+        <button type="button" data-go="membership"><svg class="i" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg><span data-t="nav.plan">Membership</span></button>
+      </nav>
+    </div>
+  </div>
+  <aside class="notes" id="notes" aria-live="polite"></aside>
+</div>
+
+<script>
+(function () {
+  // Example data for the preview only. In the app it all comes from my_account() and public_catalog().
+  const TODAY = new Date(2026, 9, 4);
+  const ME = { first: "Mai", last: "Srisuk", no: 1433, code: "482913", plan: "1 Month", started: "4 Oct", ends: "Tuesday, 28 October 2026", endsShort: "28 Oct", daysLeft: 24, total: 25, pt: { name: "10 PT sessions", left: 7, total: 10 } };
+  const LINK_TOKEN = "K7M2Q9PX";
+  const COACHES = [
+    { slug: "bella", name: "Bella", tag: "Stage-ready, the smart way.", spec: ["Bodybuilding prep", "Glutes", "Posing"], hue: ["#e5194d", "#5b0b22"] },
+    { slug: "nicha", name: "Nicha", tag: "Lose the fat. Keep the strength.", spec: ["Recomp", "Fat loss", "Nutrition"], hue: ["#7c3aed", "#2a1159"] },
+    { slug: "aun", name: "Aun", tag: "Move well. Lift heavy.", spec: ["Strength", "Mobility", "Beginners"], hue: ["#0ea5e9", "#0b3550"] },
+    { slug: "poom", name: "Poom", tag: "Get jacked.", spec: ["Hypertrophy", "Strength", "Nutrition"], hue: ["#f59e0b", "#4a2c05"] },
+  ];
+  const PRODUCTS = [
+    { name: "Banana Bam Bam", kcal: 357, p: 26, c: 52, f: 5, price: 149, ing: "Banana, honey, cinnamon, coconut water, coconut milk, vanilla whey protein", hue: ["#d9c39a", "#6b5531"] },
+    { name: "Berry Hype", kcal: 239, p: 26, c: 27, f: 3, price: 149, ing: "Blueberry, raspberry, strawberry, açaí, coconut water, vanilla whey protein", hue: ["#9b59c9", "#3a1656"] },
+    { name: "Strong Vibes", kcal: 412, p: 32, c: 38, f: 14, price: 149, ing: "Banana, peanut butter, oats, almond milk, chocolate whey protein", hue: ["#a26b3f", "#3b220f"] },
+  ];
+  const VISITS = [["Today", "07:42"], ["Yesterday", "18:10"], ["Thu 2 Oct", "06:55"], ["Tue 30 Sep", "18:31"], ["Mon 29 Sep", "07:05"]];
+
+  const T = {
+    en: { "nav.home": "Home", "nav.menu": "Menu", "nav.pass": "Check-in", "nav.pt": "PT", "nav.plan": "Membership", showPass: "Show my pass", daysLeft: "days left", brightness: "Turn your brightness up and hold it under the scanner.", hi: "Good morning" },
+    th: { "nav.home": "หน้าแรก", "nav.menu": "เมนู", "nav.pass": "เช็คอิน", "nav.pt": "เทรนเนอร์", "nav.plan": "สมาชิก", showPass: "แสดงบัตรของฉัน", daysLeft: "วันที่เหลือ", brightness: "เพิ่มความสว่างหน้าจอ แล้วยื่นให้เครื่องสแกน", hi: "สวัสดีตอนเช้า" },
+  };
+  let lang = "en";
+  const t = (k) => T[lang][k] ?? T.en[k] ?? k;
+
+  const ICON = {
+    flame: '<svg class="i" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    dumbbell: '<svg class="i" viewBox="0 0 24 24" style="color:var(--protein)"><path d="m6.5 6.5 11 11M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7"/></svg>',
+    zap: '<svg class="i" viewBox="0 0 24 24" style="color:var(--carbs)"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>',
+    drop: '<svg class="i" viewBox="0 0 24 24" style="color:var(--fat)"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>',
+    plus: '<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>',
+    check: '<svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+    chev: '<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m9 18 6-6-6-6"/></svg>',
+    scan: '<svg class="i" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>',
+    mail: '<svg class="i" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+    camera: '<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
+    sun: '<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
+    cup: '<svg class="i" viewBox="0 0 24 24"><path d="M5 3h14l-1.5 17a2 2 0 0 1-2 1.8h-7a2 2 0 0 1-2-1.8z"/><path d="M5.5 9h13"/></svg>',
+    shake: '<svg class="i" viewBox="0 0 24 24"><path d="M7 8h10l-1.2 12.2a2 2 0 0 1-2 1.8h-3.6a2 2 0 0 1-2-1.8z"/><path d="M6 8h12M12 8l2-6"/></svg>',
+    coffee: '<svg class="i" viewBox="0 0 24 24"><path d="M10 2v2M14 2v2M6 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/></svg>',
+    citrus: '<svg class="i" viewBox="0 0 24 24"><path d="M21.66 17.67a1.08 1.08 0 0 1-.04 1.6A12 12 0 0 1 4.73 2.38a1.1 1.1 0 0 1 1.61-.04z"/><path d="M19.65 15.66A8 8 0 0 1 8.35 4.34M14 10l-5.5 5.5M14 17.85V10H6.15"/></svg>',
+  };
+
+  const NOTES = {
+    signin: { title: "Sign in", items: [
+      "Supabase Auth with three buttons: <code>signInWithOAuth({provider:'google'})</code>, <code>'apple'</code>, and <code>signInWithOtp({email})</code> for the email link. No passwords.",
+      "Keep <b>Confirm email</b> ON in Supabase. Linking trusts verified emails only.",
+      "Every sign-in lands on <code>/welcome</code>, which calls the <code>link-account</code> function. Linked → Home. Not linked → the link screen.",
+      "LINE login isn't built into Supabase. Add it later as a custom provider if members ask.",
+    ] },
+    link: { title: "Link your membership", items: [
+      "Shown when <code>link-account</code> returns <code>status: 'pending'</code>. The QR holds <code>SF-LINK-&lt;deskToken&gt;</code>.",
+      "The desk scanner types it into the normal check-in box. The check-in screen spots <code>SF-LINK-</code> (<code>parseDeskScan()</code>) and opens a “Link to member” sheet instead of checking in.",
+      "Codes last 15 minutes. Call <code>link-account</code> again to refresh, and poll <code>my_account()</code> every 5 s so this screen jumps to Home the moment staff link it.",
+      "Linked automatically, no desk needed: if staff sent an invite to this email, or the verified email matches exactly one member.",
+    ] },
+    home: { title: "Home", items: [
+      "One call: <code>rpc('my_account')</code>. Status, days left and the ring come from <code>customerMembershipView(memberships, today)</code>. Never work these out in the component.",
+      "Visits this month and last visit: count <code>checkIns</code> where <code>allowed</code>.",
+      "Cafe row: the first products from the Till menu (same component, smaller).",
+    ] },
+    pass: { title: "Digital pass", items: [
+      "The QR and the barcode hold <b>exactly</b> the member's tag code (<code>pickPassCode(credentials)</code>), so the phone and the keyring tag are interchangeable. The desk needs no new code.",
+      "Members without a tag get their admin QR code instead. Link a tag at the desk any time and the app switches to it.",
+      "The live clock, pulsing dot and moving border show staff it isn't a screenshot. Their photo also appears on the desk's check-in result.",
+      "Ask for a screen wake lock while this screen is open (<code>navigator.wakeLock.request('screen')</code>).",
+      "Desk hardware: a 2D scanner that reads phone screens (USB keyboard mode, Enter after each scan). Your RFID tag reader can't read phones.",
+    ] },
+    membership: { title: "Membership", items: [
+      "Same card as the admin member page, written for the member: “You're covered until midnight…”.",
+      "PT dots: <code>view.pt.sessionsLeft</code> of <code>sessionsTotal</code>. Visits list: <code>checkIns</code>.",
+      "Renewing stays at the desk or the Till for now. Online payment can come later via PromptPay QR.",
+    ] },
+    pt: { title: "Personal training", items: [
+      "Coaches from <code>rpc('public_catalog').coaches</code>, edited in admin under Site & content. Only show coaches marked visible.",
+      "Request a session with <code>rpc('request_pt_session', {coach, on_date, at_time, goal_text})</code>. It lands in the admin's PT bookings as “requested”.",
+      "At most 3 open requests per member, enforced in the database.",
+    ] },
+    menu: { title: "Cafe menu", items: [
+      "Mirror the Till's product grid and cards from your admin project. Same components and data.",
+      "Remove the till actions. The + opens the product sheet (add-ons with live price and macros), then the order goes to the bar for pickup.",
+      "Orders from the app write <code>cafe_orders</code> with <code>channel: 'app'</code> and the member's id, so they show on the bar board.",
+    ] },
+  };
+
+  const SCREENS = [["signin", "Sign in"], ["link", "Link"], ["home", "Home"], ["pass", "Pass"], ["membership", "Membership"], ["pt", "PT"], ["menu", "Menu"]];
+  let current = "home";
+  let state = { emailSent: false, cat: "shakes", sheet: null, pick: { day: 1, time: "18:00", goal: "Strength" }, sent: null };
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const screenEl = $("#screen");
+
+  function qrSvg(text) {
+    if (typeof qrcode !== "function") return '<div style="display:grid;place-items:center;height:100%;font-weight:700">' + text + "</div>";
+    const q = qrcode(0, "M");
+    q.addData(text);
+    q.make();
+    const n = q.getModuleCount();
+    let d = "";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += "M" + c + " " + r + "h1v1h-1z";
+    return '<svg viewBox="-2 -2 ' + (n + 4) + " " + (n + 4) + '" shape-rendering="crispEdges" role="img" aria-label="QR code ' + text + '"><rect x="-2" y="-2" width="' + (n + 4) + '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+  }
+
+  const macroGrid = (p) =>
+    '<div class="macros">' +
+    '<div class="macro"><b>' + ICON.flame + p.kcal + "</b><span>KCAL</span></div>" +
+    '<div class="macro"><b style="color:var(--protein)">' + ICON.dumbbell + p.p + "</b><span>PROTEIN</span></div>" +
+    '<div class="macro"><b style="color:var(--carbs)">' + ICON.zap + p.c + "</b><span>CARBS</span></div>" +
+    '<div class="macro"><b style="color:var(--fat)">' + ICON.drop + p.f + "</b><span>FAT</span></div></div>";
+
+  const can = (p, big) =>
+    '<div class="can" style="background:linear-gradient(170deg,' + p.hue[0] + "," + p.hue[1] + ');' + (big ? "" : "min-height:120px") + '"><span class="label-v" style="font-size:' + (big ? 46 : 30) + 'px">superfit</span></div>';
+
+  function productCard(p) {
+    return '<article class="product"><div class="copy"><span class="label">Superfit smoothie</span><h3>' + p.name + "</h3>" + macroGrid(p) +
+      '<p class="muted" style="font-size:15px">' + p.ing + '</p><span class="price">฿' + p.price + "</span></div>" + can(p, true) +
+      '<button type="button" class="add" aria-label="Add ' + p.name + '">' + ICON.plus + "</button></article>";
+  }
+
+  const views = {
+    signin: () => `
+      <section class="signin">
+        <div class="head"><span class="eyebrow">Members</span><h1>Your gym in your pocket</h1>
+          <p class="muted" style="font-size:17px">Your pass, your plan and the cafe menu. Sign in and we'll connect your Superfit membership.</p></div>
+        <div class="auth">
+          <button type="button" class="btn light tap" data-act="signed-in"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg><span class="grow">Continue with Google</span></button>
+          <button type="button" class="btn ghost tap" data-act="signed-in" style="background:#000;border-color:#3a3a40"><svg viewBox="0 0 24 24" aria-hidden="true" fill="#fff"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.87-.76-1.47.02-2.83.86-3.59 2.18-1.53 2.66-.39 6.6 1.1 8.76.73 1.05 1.6 2.24 2.73 2.2 1.1-.05 1.51-.71 2.84-.71 1.32 0 1.7.71 2.86.69 1.18-.02 1.93-1.07 2.65-2.13.84-1.22 1.18-2.4 1.2-2.46-.03-.01-2.3-.88-2.32-3.5zM14.2 6.13c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.65-1.05 1.68-.92 2.68.97.07 1.96-.49 2.56-1.23z"/></svg><span class="grow">Continue with Apple</span></button>
+          ${state.emailSent
+            ? '<div class="inset" role="status"><b style="display:flex;gap:8px;align-items:center;color:var(--ok)">' + ICON.check + 'Check your inbox</b><span class="muted">We sent a sign-in link to <b style="color:var(--fg)">mai@example.com</b>. Open it on this phone.</span></div>'
+            : '<form class="field" id="emailForm"><label class="label" for="email">Or use your email</label><input id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="mai@example.com"><button class="btn primary block" type="submit">' + ICON.mail + "Email me a sign-in link</button></form>"}
+        </div>
+        <div class="inset"><b>Got an email from Superfit?</b><span class="muted">Tap the link in it. Your membership is already connected.</span></div>
+      </section>`,
+
+    link: () => `
+      <main>
+        <div class="head"><span class="eyebrow">Almost there</span><h1>Show this at the desk</h1>
+          <p class="muted">Staff scan it and pick your name. Takes five seconds, and you only do it once.</p></div>
+        <div class="pass" style="gap:14px">
+          <div class="codebox"><div class="qr">${qrSvg("SF-LINK-" + LINK_TOKEN)}</div>
+            <div class="digits" style="font-size:28px">K7M2 Q9PX</div></div>
+          <span class="live"><i></i><span id="countdown">Fresh for 15:00</span></span>
+        </div>
+        <div class="card" style="gap:8px"><b>Already gave us your email?</b>
+          <p class="muted">If the desk invited you, or you signed in with the email we have on file, you're linked automatically and won't see this screen.</p></div>
+        <button type="button" class="btn ghost block" data-act="linked">Preview: the desk just linked me</button>
+      </main>`,
+
+    home: () => `
+      <main>
+        <div class="head"><span class="eyebrow">${t("hi")}</span><h1>${ME.first}</h1></div>
+        <button type="button" class="card tap" data-go="membership" style="text-align:left">
+          <div class="row between"><div style="display:grid;gap:8px;min-width:0">
+            <span class="label">Membership</span><h2>${ME.plan}</h2><span class="pill ok" style="justify-self:start">Active</span></div>
+            <div class="ring" style="--p:${(1 - ME.daysLeft / ME.total).toFixed(2)}"><div><b>${ME.daysLeft}</b><small>${t("daysLeft").toUpperCase()}</small></div></div></div>
+          <p class="muted">Covered until midnight on ${ME.endsShort}.</p>
+        </button>
+        <button type="button" class="btn primary block tap" data-go="pass" style="min-height:60px;font-size:18px">${ICON.scan}${t("showPass")}</button>
+        <div class="grid3">
+          <div class="stat"><b>12</b><span>Visits Oct</span></div>
+          <div class="stat"><b>07:42</b><span>Last in</span></div>
+          <div class="stat"><b style="color:var(--protein)">${ME.pt.left}</b><span>PT left</span></div>
+        </div>
+        <div class="row between" style="margin-top:8px"><h3>Cafe</h3><button type="button" class="row muted" data-go="menu" style="gap:4px;min-height:44px">Full menu${ICON.chev}</button></div>
+        <div class="mini">${PRODUCTS.map((p) => '<article class="product"><div class="copy"><span class="label">Smoothie</span><h3>' + p.name + "</h3>" + macroGrid(p) + '<div class="row between"><span class="price">฿' + p.price + '</span><button type="button" class="add" style="position:static;width:44px;height:44px" aria-label="Add ' + p.name + '">' + ICON.plus + "</button></div></div></article>").join("")}</div>
+      </main>`,
+
+    pass: () => `
+      <main>
+        <div class="pass">
+          <div class="photo" aria-hidden="true">${ME.first[0]}${ME.last[0]}</div>
+          <div style="display:grid;gap:6px;justify-items:center">
+            <span class="eyebrow">#${ME.no}</span><h2>${ME.first} ${ME.last}</h2>
+            <div class="row"><span class="pill ok">Active</span><span class="muted">${ME.plan} · ${ME.daysLeft} ${t("daysLeft")}</span></div>
+          </div>
+          <div class="codebox">
+            <div class="qr">${qrSvg(ME.code)}</div>
+            <svg class="barcode" id="barcode" role="img" aria-label="Barcode ${ME.code}"></svg>
+            <div class="digits">482 913</div>
+          </div>
+          <span class="live"><i></i><span id="clock">LIVE</span></span>
+        </div>
+        <p class="row muted" style="justify-content:center;gap:8px;font-size:14px">${ICON.sun}${t("brightness")}</p>
+        <button type="button" class="btn ghost block">${ICON.camera}Change my photo</button>
+      </main>`,
+
+    membership: () => `
+      <main>
+        <div class="head"><span class="eyebrow">#${ME.no}</span><div class="row between"><h1>${ME.first} ${ME.last}</h1><span class="pill ok">Active</span></div></div>
+        <div class="card">
+          <span class="label">Membership</span><h2>${ME.plan}</h2>
+          <div class="inset"><div class="row between" style="flex-wrap:wrap;gap:4px 12px"><b style="font-size:18px">${ME.daysLeft} days left</b>
+            <span class="muted" style="font-size:14px">until <b style="color:var(--fg);font-family:var(--font-display);font-size:18px">${ME.ends}</b></span></div>
+            <p class="muted" style="font-size:15px">You're covered until midnight on this day. Renew at the desk before then to keep training.</p>
+            <div class="bar" style="margin-top:8px"><i style="width:${Math.round((1 - ME.daysLeft / ME.total) * 100)}%"></i></div></div>
+          <div class="grid2"><dl class="dl" style="margin:0"><dt class="label">Started</dt><dd>${ME.started} 2026</dd></dl><dl class="dl" style="margin:0"><dt class="label">Ends</dt><dd>28 Oct 2026</dd></dl></div>
+        </div>
+        <div class="card">
+          <div class="row between"><div style="display:grid;gap:6px"><span class="label">Personal training</span><h3>${ME.pt.name}</h3></div>
+            <div style="text-align:right"><b style="font-family:var(--font-display);font-size:40px;color:var(--protein);line-height:1">${ME.pt.left}</b><div class="muted" style="font-size:13px">left</div></div></div>
+          <div class="dots" aria-label="${ME.pt.left} of ${ME.pt.total} sessions left">${Array.from({ length: ME.pt.total }, (_, i) => '<i class="' + (i < ME.pt.total - ME.pt.left ? "used" : "") + '"></i>').join("")}</div>
+          <button type="button" class="btn ghost" data-go="pt" style="justify-self:start">Book a session</button>
+        </div>
+        <h3 style="margin-top:8px">Visits</h3>
+        <div class="list">${VISITS.map((v) => '<div><span>' + v[0] + '</span><span class="row" style="gap:8px"><small>' + v[1] + '</small><span style="color:var(--ok)">' + ICON.check + "</span></span></div>").join("")}</div>
+        <p class="example">Example member and visits for the preview.</p>
+      </main>`,
+
+    pt: () => `
+      <main>
+        <div class="head"><span class="eyebrow">Personal training</span><h1>Coaches</h1></div>
+        <div class="inset" style="grid-template-columns:1fr auto;align-items:center"><div><b>${ME.pt.left} of ${ME.pt.total} sessions left</b><div class="muted" style="font-size:14px">${ME.pt.name}</div></div><span class="pill ok">Active</span></div>
+        ${state.sent ? '<div class="card" style="border-color:rgba(52,208,99,.35)"><div class="row" style="color:var(--ok);font-weight:700">' + ICON.check + "Request sent · " + state.sent.ref + '</div><p class="muted">' + state.sent.coach + " will confirm " + state.sent.when + " on LINE.</p></div>" : ""}
+        ${COACHES.map((c) => `
+          <article class="card coach">
+            <div class="portrait" style="background:linear-gradient(160deg,${c.hue[0]},${c.hue[1]})" aria-hidden="true">${c.name[0]}</div>
+            <div style="display:grid;gap:8px;min-width:0"><h2>${c.name}</h2><p class="muted" style="font-size:15px">${c.tag}</p>
+              <div class="chips">${c.spec.map((s) => '<span class="chip">' + s + "</span>").join("")}</div>
+              <button type="button" class="btn primary" style="justify-self:start;min-height:44px;font-size:15px" data-coach="${c.slug}">Request a session</button></div>
+          </article>`).join("")}
+      </main>`,
+
+    menu: () => `
+      <main>
+        <div class="head"><span class="eyebrow">Cafe</span><h1>Menu</h1></div>
+        <div class="cats" role="group" aria-label="Category">
+          ${[["water", "Water", ICON.cup], ["shakes", "Shakes", ICON.shake], ["coffee", "Coffee", ICON.coffee], ["juices", "Juices", ICON.citrus]].map((c) => '<button type="button" data-cat="' + c[0] + '" aria-pressed="' + (state.cat === c[0]) + '">' + c[2] + c[1] + "</button>").join("")}
+        </div>
+        ${PRODUCTS.map(productCard).join("")}
+        <p class="example">Placeholder art. Your Lovable menu already has the real product photos.</p>
+      </main>`,
+  };
+
+  function sheet() {
+    if (!state.sheet) return "";
+    const c = COACHES.find((x) => x.slug === state.sheet);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(TODAY);
+      d.setDate(d.getDate() + i);
+      return { i, label: i === 0 ? "Today" : i === 1 ? "Tmrw" : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric" }) };
+    });
+    const btns = (arr, key) => arr.map((v) => '<button type="button" data-pick="' + key + '" data-val="' + v.val + '" aria-pressed="' + (String(state.pick[key]) === String(v.val)) + '">' + v.label + "</button>").join("");
+    return `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Request a session with ${c.name}">
+      <div class="grab"></div>
+      <div class="row between"><div class="head"><span class="eyebrow">Request a session</span><h2>${c.name}</h2></div>
+        <button type="button" class="avatar" data-act="close" aria-label="Close"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="field"><span class="label">Day</span><div class="choice">${btns(days.map((d) => ({ val: d.i, label: d.label })), "day")}</div></div>
+      <div class="field"><span class="label">Time</span><div class="choice">${btns(["06:00", "07:00", "08:00", "17:00", "18:00", "19:00"].map((x) => ({ val: x, label: x })), "time")}</div></div>
+      <div class="field"><span class="label">Goal</span><div class="choice">${btns(["Strength", "Fat loss", "Muscle", "Comp prep"].map((x) => ({ val: x, label: x })), "goal")}</div></div>
+      <button type="button" class="btn primary block" data-act="send">Send request</button>
+      <p class="muted" style="font-size:14px;text-align:center">Uses one of your ${ME.pt.left} sessions once ${c.name} confirms.</p>
+    </div></div>`;
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const old = $(".toast");
+    if (old) old.remove();
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.setAttribute("role", "status");
+    el.innerHTML = ICON.check + msg;
+    $("#phone").appendChild(el);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.remove(), 3200);
+  }
+
+  let tick;
+  function render() {
+    $("#nav").hidden = current === "signin" || current === "link";
+    $("#avatarBtn").hidden = current === "signin" || current === "link";
+    screenEl.innerHTML = views[current]() + sheet();
+    document.querySelectorAll("#nav [data-go]").forEach((b) => (b.dataset.go === current ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
+    document.querySelectorAll("[data-t]").forEach((el) => (el.textContent = t(el.dataset.t)));
+    $("#picker").innerHTML = SCREENS.map((s) => '<button type="button" data-screen="' + s[0] + '" aria-pressed="' + (s[0] === current) + '">' + s[1] + "</button>").join("");
+    const n = NOTES[current];
+    $("#notes").innerHTML = '<div class="card"><span class="eyebrow">Build notes</span><h2>' + n.title + "</h2><ul>" + n.items.map((x) => "<li>" + x + "</li>").join("") + "</ul></div>" +
+      '<div class="card" style="gap:8px"><span class="label">Files</span><ul><li><code>lib/customer/pass.ts</code> · pass code + membership view</li><li><code>lib/customer/link.ts</code> · linking rules + desk QR</li><li><code>supabase/customer-app.sql</code> · tables + RPCs</li><li><code>supabase/functions/*</code> · link-account, member-invite, desk-link</li></ul></div>';
+
+    clearInterval(tick);
+    if (current === "pass") {
+      try { JsBarcode("#barcode", ME.code, { format: "CODE128", displayValue: false, margin: 0, height: 64, width: 2.4, background: "#ffffff", lineColor: "#000000" }); } catch (e) { /* library offline: QR still works */ }
+      const clock = () => { const el = $("#clock"); if (el) el.textContent = "LIVE · " + new Date().toLocaleTimeString("en-GB"); };
+      clock();
+      tick = setInterval(clock, 1000);
+    }
+    if (current === "link") {
+      let left = 15 * 60;
+      tick = setInterval(() => { left = Math.max(0, left - 1); const el = $("#countdown"); if (el) el.textContent = "Fresh for " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0"); }, 1000);
+    }
+  }
+
+  function go(s) { current = s; state.sheet = null; render(); $("#phone").scrollIntoView({ block: "nearest" }); }
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("button, .scrim");
+    if (!el) return;
+    if (el.dataset.screen) return go(el.dataset.screen);
+    if (el.dataset.go) return go(el.dataset.go);
+    if (el.dataset.lang) {
+      lang = el.dataset.lang;
+      document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+      return render();
+    }
+    if (el.dataset.cat) { state.cat = el.dataset.cat; return render(); }
+    if (el.dataset.coach) { state.sheet = el.dataset.coach; return render(); }
+    if (el.dataset.pick) { state.pick[el.dataset.pick] = el.dataset.val; return render(); }
+    const act = el.dataset.act;
+    if (act === "close" && (el.classList.contains("scrim") ? e.target === el : true)) { state.sheet = null; return render(); }
+    if (act === "send") {
+      const c = COACHES.find((x) => x.slug === state.sheet);
+      const d = new Date(TODAY); d.setDate(d.getDate() + Number(state.pick.day));
+      state.sent = { ref: "PT-4F2A1C", coach: c.name, when: d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) + " at " + state.pick.time };
+      state.sheet = null; render(); return toast("Sent to " + c.name);
+    }
+    if (act === "signed-in") return go("link");
+    if (act === "linked") { go("home"); return toast("You're linked. Welcome, " + ME.first + "."); }
+  });
+  document.addEventListener("submit", (e) => { if (e.target.id === "emailForm") { e.preventDefault(); state.emailSent = true; render(); } });
+
+  render();
+})();
+</script>

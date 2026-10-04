@@ -3,6 +3,7 @@ import { specialties } from "@/content/coaches";
 import type { Plan, PlanDuration } from "@/content/plans";
 import type { Allergen, Category, Coach, Ingredient, Macros, MenuItem, Option, OptionGroup, RecipeLine, SpecialtyId, Tag } from "@/content/types";
 import { ServiceError } from "@/lib/errors";
+import { isPromptPayId } from "@/lib/payments/promptpay";
 import type { Catalog, CatalogSection } from "./index";
 
 /*
@@ -304,8 +305,8 @@ function plans(v: unknown, c: Catalog): Plan[] {
 
 function business(v: unknown): Business {
   const o = obj(v, "Business");
-  const promptPayId = str(o.promptPayId, "PromptPay", 20).replace(/[\s-]/g, "");
-  if (promptPayId && !/^(\d{10}|\d{13})$/.test(promptPayId)) fail("PromptPay must be a 10-digit phone number or a 13-digit tax ID.");
+  const promptPayId = str(o.promptPayId, "PromptPay", 24).replace(/[\s-]/g, "");
+  if (promptPayId && !isPromptPayId(promptPayId)) fail("PromptPay must be a Thai mobile number, a 13-digit tax ID or a 15-digit e-wallet ID.");
   return {
     name: str(o.name, "Name", 60, true),
     promptPayId,

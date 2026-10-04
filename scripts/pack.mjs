@@ -85,7 +85,7 @@ const coreFiles = [...seen].map((f) => path.relative(root, f)).sort();
 for (const rel of coreFiles) cpSync(path.join(root, rel), path.join(stage, "core", rel));
 
 // Unit tests that only need the core (no database).
-const PURE_TESTS = ["membership.test.ts", "nutrition.test.ts", "format.test.ts", "payments.test.ts", "reminders.test.ts", "reports.test.ts", "customer.test.ts"];
+const PURE_TESTS = ["membership.test.ts", "nutrition.test.ts", "format.test.ts", "payments.test.ts", "reminders.test.ts", "reports.test.ts", "customer.test.ts", "promptpay.test.ts"];
 for (const t of PURE_TESTS) {
   const p = path.join(root, "tests/unit", t);
   if (!existsSync(p)) continue;
@@ -105,6 +105,7 @@ mkdirSync(path.join(stage, "supabase"), { recursive: true });
 writeFileSync(path.join(stage, "supabase/schema.sql"), `-- Superfit database, all migrations in order (${migrations.length}). Run once in the Supabase SQL editor.\n\n${sql}\n`);
 // Customer app: accounts linked to members (run after schema.sql) + edge functions.
 cpSync(path.join(root, "supabase/customer-app.sql"), path.join(stage, "supabase/customer-app.sql"));
+cpSync(path.join(root, "supabase/payments.sql"), path.join(stage, "supabase/payments.sql"));
 cpSync(path.join(root, "supabase/functions"), path.join(stage, "supabase/functions"), { recursive: true });
 cpSync(path.join(root, "docs/CUSTOMER-APP.md"), path.join(stage, "CUSTOMER_APP.md"));
 cpSync(path.join(root, "docs/customer-app-preview.html"), path.join(stage, "customer-app-preview.html"));
@@ -140,6 +141,7 @@ Built ${new Date().toISOString().slice(0, 10)} from commit ${sha}. Self-containe
 2. **Lovable:** new project, connect that Supabase. Paste \`LOVABLE_PROMPT.md\` as the first message.
 3. **Rules:** upload the contents of \`core/\` into the project's \`src/\` (keep the folders: \`src/lib/...\`, \`src/content/...\`). The \`@/\` import alias must point at \`src/\` (Lovable's default).
 4. **Customer app:** run \`supabase/customer-app.sql\` after the schema, add \`supabase/functions/\`, then follow \`CUSTOMER_APP.md\` (prompts in order). Open \`customer-app-preview.html\` to see every screen.
+   **Thai QR payments:** then run \`supabase/payments.sql\` and follow the "Thai QR payments" section of \`CUSTOMER_APP.md\`.
 5. **Reference:** \`superfit-app/\` is the complete working app (Next.js). Use it for screens, copy and behaviour, or run it as-is: \`cd superfit-app && npm install && npm run dev\`.
 
 ## What's in core/ (${coreFiles.length} files, no Next.js or database code)

@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { Banknote, CreditCard, QrCode } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatTHB } from "@/lib/format";
-import { promptPayPayload } from "@/lib/payments/promptpay";
+import { formatPromptPayId, isPromptPayId, promptPayPayload } from "@/lib/payments/promptpay";
 import { cn } from "@/lib/utils";
 
 export type DeskPayMethod = "qashier" | "promptpay" | "cash";
@@ -85,13 +85,13 @@ export function PaymentStep({
 function PromptPayQr({ amount, promptPayId }: { amount: number; promptPayId: string | null }) {
   const [svg, setSvg] = useState("");
   useEffect(() => {
-    if (!promptPayId || amount <= 0) return setSvg("");
+    if (!promptPayId || !isPromptPayId(promptPayId) || amount <= 0) return setSvg("");
     QRCode.toString(promptPayPayload(promptPayId, amount), { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
       .then(setSvg)
       .catch(() => setSvg(""));
   }, [promptPayId, amount]);
 
-  if (!promptPayId)
+  if (!promptPayId || !isPromptPayId(promptPayId))
     return (
       <p className="rounded-2xl bg-surface-2 p-4 text-sm text-text-secondary">
         Add the gym&apos;s PromptPay number in Admin → Site &amp; content → Business to show a QR here.
@@ -108,6 +108,7 @@ function PromptPayQr({ amount, promptPayId }: { amount: number; promptPayId: str
       <div className="min-w-0">
         <p className="text-xs font-bold tracking-[0.18em] text-black/50 uppercase">PromptPay</p>
         <p className="font-display tabular mt-1 text-4xl leading-none">{formatTHB(amount)}</p>
+        <p className="tabular mt-1 text-xs text-black/60">To {formatPromptPayId(promptPayId)}</p>
         <p className="mt-2 text-xs text-black/60">Customer scans. Check it landed, then confirm.</p>
       </div>
     </div>

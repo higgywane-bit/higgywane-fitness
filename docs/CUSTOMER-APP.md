@@ -15,8 +15,12 @@ Preview of every screen, with build notes: `docs/customer-app-preview.html` (ope
 | `supabase/functions/member-invite` | Staff: "Invite to the app". Saves the email and sends a sign-in link. |
 | `supabase/functions/desk-link` | Staff: link by scanning the app's QR, link or create from the queue, dismiss, unlink. |
 | `tests/unit/customer.test.ts` | 16 tests for all of the above. |
+| `lib/payments/promptpay.ts` | Thai QR: PromptPay QR for phone / tax ID / e-wallet, bill-payment QR with the order number as reference, reading any Thai QR back (checksum checked), reading bank-slip QRs, and slip checks (`checkSlip`). |
+| `supabase/payments.sql` | `payment_intents` (one row per "please pay ฿X"), auto-marks the cafe order paid, Realtime, private `payment-slips` bucket, `open_payments` view for the desk. |
+| `supabase/functions/promptpay` | Create a QR for an order or a desk charge, status, attach a slip, staff confirm, cancel. |
+| `tests/unit/promptpay.test.ts` | 14 tests, including a reference payload from the widely used `promptpay-qr` library. |
 
-`supabase/functions/_shared/link.ts` is a copy of `lib/customer/link.ts` for Deno. A test fails if they drift. After changing the rules, run `cp lib/customer/link.ts supabase/functions/_shared/link.ts`.
+`supabase/functions/_shared/link.ts` and `_shared/promptpay.ts` are copies of `lib/customer/link.ts` and `lib/payments/promptpay.ts` for Deno. A test fails if they drift. After changing either, copy it over again (`cp lib/payments/promptpay.ts supabase/functions/_shared/promptpay.ts`).
 
 ## How members get connected
 
@@ -90,9 +94,46 @@ Paste one at a time. Each assumes the previous one is done. Upload `lib/customer
 > 5. **New member form:** a **Send app invite** switch, on when an email is filled in.
 > 6. **Optional camera scan:** a camera button on check-in that reads QR/barcodes with the browser's BarcodeDetector (fallback: html5-qrcode) and feeds the result into the same box.
 
+## Thai QR payments (PromptPay)
+
+The customer scans a QR in any Thai bank app and the money goes **straight into the gym's account**: no provider, no fees, no contract. The QR is built in our own code (`lib/payments/promptpay.ts`), checked against the Bank of Thailand Thai QR standard.
+
+**The one catch:** a plain PromptPay transfer doesn't tell anyone it happened. The bank notifies the gym's phone, not our app. So every payment has a confirm step:
+
+| How it's confirmed | What it needs | When |
+|---|---|---|
+| **Staff tap Confirm** when it lands in the bank app | nothing | Now |
+| **Customer scans their slip** in the app. We read the slip's QR (bank + transaction ref), staff see "Slip sent" and confirm in one tap. One slip can never pay twice. | nothing | Now |
+| **Automatic, from the slip**: the slip's transaction ref is checked with a slip-verification API, then `checkSlip()` checks amount, receiver, time and re-use | an account with a slip-verification service | Later, one hook in `promptpay/index.ts` |
+| **Automatic, from the bank**: bill-payment QR (`billPaymentPayload`) carries the order number; the bank's webhook says which order was paid | a biller ID from the gym's business bank account | Later |
+| **Payment gateway** (Opn, 2C2P): they make the QR and send a webhook | a merchant account, about 1.6% per payment | Later, if volume justifies it |
+
+### Setup
+1. Admin → Site & content → Business → **PromptPay number**: the gym's mobile number, 13-digit tax ID or 15-digit e-wallet ID (or set the `PROMPTPAY_ID` secret on the edge functions).
+2. SQL editor → paste `supabase/payments.sql` → Run (after `customer-app.sql`).
+3. Edge functions: add `promptpay` (it uses `_shared/promptpay.ts` and `_shared/http.ts`).
+4. Upload `lib/payments/promptpay.ts` into `src/lib/payments/`.
+5. **Test with real money once**: ฿1 from a phone, check the name shown in the bank app before confirming is the gym's.
+
+### Lovable prompts
+
+#### 7. Pay by QR in the app
+
+> When a customer orders from `/app/menu`, after **Order for pickup** show a choice: **Pay now with QR** or **Pay at the counter**. Pay now calls the edge function `promptpay` `{ action: 'create', orderId }` and opens `/app/pay/:intentId`.
+> `/app/pay/:intentId`, same style as the pass: eyebrow "ORDER <reference>", title "SCAN TO PAY", a white card with the PromptPay logo text, the amount in the display font, the QR of `qrPayload` (use the `qrcode` package, error correction M, at least 240px, white quiet zone), "To Superfit · <formatPromptPayId(promptPayId)>", and a countdown to `expiresAt`. Under it: "Open your bank app, scan, and pay the exact amount." Button **Save QR to photos** (so they can open it from their bank app on the same phone).
+> Subscribe with Supabase Realtime to `payment_intents` where `id = intentId`, and also poll `{ action: 'status' }` every 5 s as a fallback. On `paid`: a green tick, "Paid. Your order is with the bar.", then go to the order page. On `expired`: "This code has expired" with **Get a new code** (`create` again) and **Pay at the counter** (`cancel`).
+> Button **I've paid: scan my slip**: opens the camera (BarcodeDetector, fallback `jsqr`) or lets them pick the slip screenshot from photos, reads the small QR on the slip, uploads the image to the `payment-slips` bucket at `<user id>/<intentId>.jpg`, then calls `{ action: 'slip', intentId, slipQr, slipImagePath }`. Show the error message from the function as is (it explains when they scanned the wrong QR). On success show "Slip sent. We'll confirm in a moment." in amber.
+
+#### 8. Confirm QR payments at the desk
+
+> 1. **Payments** panel on the check-in screen and the bar board: rows from the `open_payments` view, live via Realtime on `payment_intents`. Each row: reference, member name, amount in big digits, time ago, and a status pill (amber "Waiting", blue "Slip sent" with the bank name, grey "Expired"). Tapping a row with a slip opens the slip image (signed URL from `payment-slips`). Big green **Confirm paid** calls `promptpay` `{ action: 'confirm', intentId }`; **Cancel** calls `cancel`. Play the check-in success sound when a row turns into "Slip sent".
+> 2. **Till QR payments:** when staff choose QR at the till, call `{ action: 'create', amount, reference: ticketNumber, memberId }` and show the returned `qrPayload` large on the customer-facing side, with the same live status; **Confirm paid** finishes the sale only after `confirm` succeeds.
+> 3. Only staff ever see **Confirm paid**. Never mark a QR order paid anywhere else; the database trigger marks the cafe order paid when the payment is confirmed.
+
 ## Later
 
-- Pay for renewals in the app (PromptPay QR, `core/lib/payments/promptpay.ts`) with staff confirmation.
+- Pay for renewals in the app: add a `membership` purpose to `payment_intents` that creates the membership when confirmed.
+- Automatic slip checks or bill-payment webhooks (see the table in Thai QR payments).
 - Rotating pass codes (time-based) if sharing passes becomes a problem. The tag code is just as shareable today, so start simple.
 - LINE login as a custom OIDC provider.
 - Push notifications for "3 days left" (the reminder rules already exist in `lib/membership/reminders.ts`).

@@ -46,8 +46,9 @@ export function Wordmark({ className }: { className?: string }) {
 /** Round app mark used in headers. */
 export function Mark({ className }: { className?: string }) {
   return (
-    <span aria-hidden className={cn("grid size-8 place-items-center rounded-[10px] bg-white text-[17px] font-black tracking-tight text-black", className)}>
-      s<span className="text-s1-blue">1</span>
+    <span aria-hidden className={cn("inline-flex size-8 items-center justify-center rounded-[10px] bg-white text-[17px] leading-none font-black tracking-tight text-black", className)}>
+      <span>s</span>
+      <span className="text-s1-blue">1</span>
     </span>
   );
 }

@@ -364,13 +364,26 @@ export async function savePlan<K extends PlanKind>(
   const coachName = await staffName(db, input.coachId ?? client.coachId);
   const notified = client.status === "active" && changes.length > 0;
   if (notified) {
+    // one notice per plan: an unread earlier update is folded into this one
+    const href = input.kind === "workout" ? "/app/workout" : input.kind === "diet" ? "/app/nutrition" : "/app/feedback";
+    const [prev] = await db
+      .select()
+      .from(ptNotifications)
+      .where(and(eq(ptNotifications.clientId, client.id), eq(ptNotifications.audience, "client"), eq(ptNotifications.kind, "plan.updated"), eq(ptNotifications.href, href), isNull(ptNotifications.readAt)))
+      .limit(1);
+    const lines = [...changes];
+    if (prev) {
+      const earlier = (prev.body ?? "").split(". ").filter((x) => x && !x.startsWith("And ") && !changes.some((c) => c.split(":")[0] === x.split(":")[0]));
+      lines.push(...earlier);
+      await db.delete(ptNotifications).where(eq(ptNotifications.id, prev.id));
+    }
     await notify(db, {
       clientId: client.id,
       audience: "client",
       kind: "plan.updated",
       title: `${coachName} updated your ${PLAN_LABEL[input.kind]}`,
-      body: changes.slice(0, 4).join(". ") + (changes.length > 4 ? `. And ${changes.length - 4} more` : ""),
-      href: input.kind === "workout" ? "/app/workout" : input.kind === "diet" ? "/app/nutrition" : "/app/feedback",
+      body: lines.slice(0, 4).join(". ") + (lines.length > 4 ? `. And ${lines.length - 4} more` : ""),
+      href,
     }, now);
   }
   await logActivity(db, client.memberId, `pt.${input.kind}`, `${PLAN_LABEL[input.kind][0].toUpperCase()}${PLAN_LABEL[input.kind].slice(1)} updated by ${coachName}`, now);

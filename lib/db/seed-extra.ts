@@ -3,6 +3,7 @@ import { menu } from "@/content/menu";
 import { addDays, addMonths, localDate } from "@/lib/membership/dates";
 import { setSetting } from "@/lib/settings";
 import { hashPin } from "@/lib/staff/service";
+import { seedPt } from "./seed-pt";
 import type { DB } from "./client";
 import { cafeOrders, expenses, leads, messages, ptBookings, ptSessions, shifts, staff, timeEntries, type MembershipRow } from "./schema";
 
@@ -92,8 +93,10 @@ export async function seedExtra(db: DB, r: R, now: Date, memberIds: string[], ms
 
   /* PT: sessions behind every pack's used count, credited to coaches */
   const sessions: (typeof ptSessions.$inferInsert)[] = [];
+  const packCoach = new Map<string, string>();
   for (const m of ms.filter((x) => x.kind === "pt")) {
     const coach = pick(coachStaff);
+    packCoach.set(m.memberId, coach.id);
     for (let k = 0; k < m.sessionsUsed; k++) {
       sessions.push({ memberId: m.memberId, membershipId: m.id, coachId: coach.id, at: at(addDays(today, -1 - k * 3), pick(["07:00", "08:00", "17:00", "18:00"])), status: k === 1 ? "no-show" : "done" });
     }
@@ -224,5 +227,8 @@ export async function seedExtra(db: DB, r: R, now: Date, memberIds: string[], ms
   });
 
   await setSetting(db, "targets", { revenue: 320_000, newMembers: 15, activeMembers: 45, ptSessions: 40 });
+
+  /* PT app: clients on the app, plans, logged workouts, feedback, programs */
+  await seedPt(db, r, now, coachStaff, ms, packCoach);
   void memberIds;
 }

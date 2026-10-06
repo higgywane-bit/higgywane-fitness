@@ -24,6 +24,9 @@ import { formatAccessCode } from "@/lib/membership/codes";
 import { diffDays, formatDate, formatMoment } from "@/lib/membership/dates";
 import { fullName } from "@/lib/membership/service";
 import { qrSvg } from "@/lib/qr";
+import { eq } from "drizzle-orm";
+import { getDb, t } from "@/lib/db";
+import { PtAppStatus } from "@/components/admin/pt-app-status";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -54,6 +57,13 @@ export default async function MemberPage({ params, searchParams }: { params: Pro
   const sellTarget = { id: m.id, name, coverEnds: s.coverEnds ?? null };
   const gym = s.current;
   const pts = d.memberships.filter((x) => x.kind === "pt" && membershipState(x, today) === "active");
+  const db = await getDb();
+  const [ptApp] = await db
+    .select({ status: t.ptClients.status, coachName: t.staff.name })
+    .from(t.ptClients)
+    .leftJoin(t.staff, eq(t.staff.id, t.ptClients.coachId))
+    .where(eq(t.ptClients.memberId, m.id))
+    .limit(1);
 
   // progress through current cover
   const total = gym && s.coverEnds ? diffDays(gym.startsOn, s.coverEnds) + 1 : 0;
@@ -203,6 +213,7 @@ export default async function MemberPage({ params, searchParams }: { params: Pro
             ) : (
               <p className="text-sm text-text-tertiary">No active PT pack.</p>
             )}
+            <PtAppStatus memberId={m.id} status={ptApp?.status ?? null} coachName={ptApp?.coachName ?? null} hasEmail={!!m.email} />
           </Panel>
 
           {/* visits */}

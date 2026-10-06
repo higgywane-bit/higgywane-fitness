@@ -7,6 +7,7 @@ Goal: the cleanest, most premium, most interactive gym site possible — app-lik
 - `docs/PLAN.md` — the full spec: stack, design direction, routes, feature specs, data models, build sessions. Follow it.
 - `content/pricing.json` — real prices (memberships, PT, cafe) supplied by the owner. Source of truth; never hard-code prices in components.
 - `docs/ADMIN-PLAN.md` — admin blueprint: modules, dashboard module catalogue, metric definitions, data model, integration contracts, Lovable handoff, roadmap.
+- `docs/PT-APP.md` — PT client app (`/app`) + coach portal (`/coach`): till → coach → client connection, screens, data model, rules, super1 brand tokens, Lovable handoff.
 - `docs/MEMBERSHIP.md` — the membership system / admin (`/admin`) that replaces Glofox: check-in, members, Glofox import, Qashier sales, reminders.
 - `brand/reference/` — logo, the "SUPERCOACH TEAM" poster (coaches Bella, Nicha, Aun, Poom), and the owner's favourite font (Avenir Next LT Pro Heavy Condensed).
 
@@ -15,6 +16,8 @@ Goal: the cleanest, most premium, most interactive gym site possible — app-lik
 2. **Coaches**: rotating full-bleed portraits → shared-element transition into rich profile pages.
 3. **Train**: memberships + PT pricing with savings computed from data.
 4. **Admin** (`/admin`): members database + front-desk check-in. Membership rules stay in the pure functions in `lib/membership/access.ts`; never re-derive days left or status in components. Dashboard figures are defined once in `lib/dashboard/data.ts` (definitions in `docs/ADMIN-PLAN.md` §4); new dashboard modules go in `lib/dashboard/catalog.ts` + `LOADERS` + `RENDERERS`.
+
+5. **PT app** (`/app` clients, `/coach` coaches, super1 brand `--s1-*` tokens): plan, macro, feedback and progress rules live in the pure functions in `lib/pt/`; sessions left always comes from `memberStanding()`. Never re-derive in components.
 
 ## Conventions
 - Next.js App Router + TypeScript (strict) + Tailwind v4 + shadcn/ui + Motion + Embla + Vaul + Zustand.

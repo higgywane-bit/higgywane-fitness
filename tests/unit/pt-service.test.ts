@@ -209,3 +209,23 @@ describe("linking", () => {
     expect(await readInvite(db, tokenFrom(again.link))).toMatchObject({ firstName: "Gaurav" });
   });
 });
+
+describe("update notices", () => {
+  it("fold unread updates to the same plan into one notice", async () => {
+    const m = await createMember(db, { firstName: "Mint", email: "mint@example.com" });
+    const { client } = await linkClient(db, { memberId: m.id, coachId: bella.id });
+    await db.update(ptClients).set({ status: "active" }).where(eq(ptClients.id, client.id));
+    let plan = addDay(emptyPlan(), "Legs", "legs");
+    plan = addExercises(plan, "legs", [findExercise("back-squat")!, findExercise("leg-press")!]);
+    await savePlan(db, { clientId: client.id, kind: "workout", doc: plan, coachId: bella.id });
+    const [squat, press] = plan.days[0].exercises;
+    const v2 = updateExercise(plan, "legs", squat.uid, (e) => setAllTargets(e, 5));
+    await savePlan(db, { clientId: client.id, kind: "workout", doc: v2, coachId: bella.id });
+    const v3 = updateExercise(v2, "legs", press.uid, (e) => setAllTargets(e, 15));
+    const res = await savePlan(db, { clientId: client.id, kind: "workout", doc: v3, coachId: bella.id });
+    expect(res.changes).toEqual(["Leg press: 4 × 12 → 4 × 15"]);
+    const inbox = await clientInbox(db, client.id);
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0].body).toBe("Leg press: 4 × 12 → 4 × 15. Back squat: 4 × 8 → 4 × 5. New day: Legs");
+  });
+});

@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { actingStaffId } from "@/lib/staff/session";
 import { withActor } from "@/lib/staff/context";
-import { getDb } from "@/lib/db";
+import { and, eq } from "drizzle-orm";
+import { getDb, t } from "@/lib/db";
+import { onPtPackSold, sendInvite } from "@/lib/pt/service";
+import { baseUrl } from "@/lib/pt/session";
 import { searchMembers, recentCheckIns, todayCount, type FeedItem, type MemberListRow } from "@/lib/admin/queries";
 import { planImport, removeDemoData, runImport, type ImportPlan } from "@/lib/membership/import";
 import type { ImportMapping } from "@/lib/membership/glofox";
@@ -78,8 +81,40 @@ export async function createMemberAction(input: svc.MemberInput & { cardCode?: s
   return run(async () => {
     const db = await getDb();
     const member = await svc.createMember(db, input);
-    if (input.sell?.planId) await svc.sellPlan(db, member.id, input.sell);
+    if (input.sell?.planId) {
+      const sold = await svc.sellPlan(db, member.id, input.sell);
+      await linkPtSale(db, sold, input.sell.coachId);
+    }
     return { id: member.id };
+  });
+}
+
+/**
+ * The till → PT app connection: a PT pack sold with a coach links the member to that
+ * coach and sends their app invite (or tells them about the new sessions if they're on it).
+ */
+async function linkPtSale(db: Awaited<ReturnType<typeof getDb>>, sold: { memberId: string; kind: string; planName: string; sessionsTotal: number | null }, coachId?: string | null) {
+  if (sold.kind !== "pt" || !coachId) return null;
+  const res = await onPtPackSold(db, getMailer(), { memberId: sold.memberId, coachId, planName: sold.planName, sessions: sold.sessionsTotal, baseUrl: await baseUrl() });
+  const [coach] = await db.select({ name: t.staff.name }).from(t.staff).where(eq(t.staff.id, coachId));
+  return { coachName: coach?.name ?? "Coach", invited: res.invited, link: res.link, emailed: res.emailed, email: res.email, preview: res.preview };
+}
+
+/** Coaches for the PT coach picker when selling a pack. */
+export async function ptCoachesAction() {
+  return run(async () => {
+    const db = await getDb();
+    return db.select({ id: t.staff.id, name: t.staff.name }).from(t.staff).where(and(eq(t.staff.role, "coach"), eq(t.staff.active, true))).orderBy(t.staff.name);
+  }, false);
+}
+
+/** Desk: (re)send a member's PT app link. */
+export async function sendPtInviteAction(memberId: string) {
+  return run(async () => {
+    const db = await getDb();
+    const [client] = await db.select().from(t.ptClients).where(eq(t.ptClients.memberId, memberId)).limit(1);
+    if (!client) throw new svc.ServiceError("Sell a PT pack with a coach first.");
+    return sendInvite(db, getMailer(), client.id, await baseUrl());
   });
 }
 
@@ -114,8 +149,10 @@ export async function revokeCredentialAction(credentialId: string) {
 
 export async function sellPlanAction(memberId: string, input: svc.SellInput) {
   return run(async () => {
-    const m = await svc.sellPlan(await getDb(), memberId, input);
-    return { startsOn: m.startsOn, endsOn: m.endsOn, planName: m.planName };
+    const db = await getDb();
+    const m = await svc.sellPlan(db, memberId, input);
+    const pt = await linkPtSale(db, m, input.coachId);
+    return { startsOn: m.startsOn, endsOn: m.endsOn, planName: m.planName, pt };
   });
 }
 

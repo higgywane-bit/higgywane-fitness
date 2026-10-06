@@ -312,6 +312,8 @@ export type SellInput = {
   paymentMethod: string;
   paymentRef?: string | null;
   notes?: string | null;
+  /** PT packs: the coach, so the client is linked and invited to the PT app (lib/pt/service.ts onPtPackSold) */
+  coachId?: string | null;
 };
 
 export async function sellPlan(db: DB, memberId: string, input: SellInput, now = new Date()): Promise<MembershipRow> {

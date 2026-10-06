@@ -54,6 +54,7 @@ Three ideas hold it together:
 | **Activity log** | Built | Everything that happened in the last 30 days, filter by type and by staff member | Superfit |
 | **Exports** | Built | CSV of members, check-ins, sales, leads, expenses, timesheets, PT sessions | Superfit |
 | **Settings** | Built | Connections status, reminders queue, desk rules, hardware tips, exports, team access, demo data | — |
+| **PT app + coach portal** | Built | Selling a PT pack with a coach links the client and sends their app invite; coaches build workouts, nutrition and daily feedback in `/coach`, and clients train with them in `/app`. See `docs/PT-APP.md` | Superfit |
 | Qashier live feed | Ready to connect | Webhook endpoint waiting for Qashier API access | Qashier API |
 | Staff logins & roles | Next | Real sign-in replacing the "who's working" picker; role permissions (roles already stored on each staff member) | Supabase Auth |
 | Member accounts | Next | Members sign in on the website and see their pass, history, PT balance | Supabase Auth |

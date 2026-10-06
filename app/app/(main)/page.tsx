@@ -78,7 +78,7 @@ export default async function ClientHomePage() {
         </div>
 
         <div className="flex gap-2">
-          <Stat label="PT sessions left" value={home.pack ? home.pack.sessionsLeft : "—"} />
+          <Stat label="Sessions left" value={home.pack ? home.pack.sessionsLeft : "—"} />
           {v.homeStats ? (
             <>
               <Stat label="Avg steps" value={home.avgSteps != null ? Math.round(home.avgSteps).toLocaleString("en-US") : "—"} />

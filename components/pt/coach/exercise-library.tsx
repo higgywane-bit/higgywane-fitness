@@ -13,7 +13,7 @@ const defaultLabel = (e: LibraryExercise) => exerciseSummary(fromLibrary(e, "x")
 
 function GroupChips({ value, onChange, lang, counts }: { value: GroupId | "all"; onChange: (g: GroupId | "all") => void; lang: Lang; counts: Record<string, number> }) {
   return (
-    <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Body part">
+    <div className="no-scrollbar -mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Body part">
       {[{ id: "all" as const, en: "All", th: "ทั้งหมด" }, ...GROUPS].map((g) => (
         <button
           key={g.id}

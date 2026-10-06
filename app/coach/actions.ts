@@ -16,6 +16,7 @@ import { hashPin } from "@/lib/staff/service";
 import { addableMembers } from "@/lib/pt/queries";
 import { baseUrl, requireCoach, startSession, stopSession } from "@/lib/pt/session";
 import * as pt from "@/lib/pt/service";
+import { failed, lockedFor, succeeded } from "@/lib/pt/throttle";
 import type { Visibility } from "@/lib/pt/clients";
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
@@ -39,8 +40,22 @@ async function run<T>(fn: (coach: Awaited<ReturnType<typeof requireCoach>>) => P
 export async function coachLoginAction(staffId: string, pin: string): Promise<Result> {
   try {
     const db = await getDb();
-    const s = await pt.coachLogin(db, staffId, (row) => !row.pinHash || row.pinHash === hashPin(row.id, pin));
-    await startSession("coach", s.id);
+    const [row] = await db.select({ pinHash: t.staff.pinHash }).from(t.staff).where(eq(t.staff.id, staffId)).limit(1);
+    // A PIN is required online; locally (demo data) staff without one can sign straight in.
+    if (row && !row.pinHash && process.env.NODE_ENV === "production") {
+      return { ok: false, error: "Ask the owner to set your PIN in Admin › Staff first." };
+    }
+    const key = `coach:${staffId}`;
+    const wait = lockedFor(key);
+    if (wait) return { ok: false, error: `Too many wrong PINs. Try again in ${wait} min.` };
+    try {
+      const s = await pt.coachLogin(db, staffId, (r) => (r.pinHash ? r.pinHash === hashPin(r.id, pin) : true));
+      succeeded(key);
+      await startSession("coach", s.id);
+    } catch (err) {
+      failed(key);
+      throw err;
+    }
   } catch (err) {
     if (err instanceof ServiceError) return { ok: false, error: err.message };
     console.error(err);

@@ -66,6 +66,11 @@ export async function requireClient() {
   return me;
 }
 
+/** Coach portal language for library and cue names (cookie set from the sidebar). */
+export async function coachLang(): Promise<"en" | "th"> {
+  return (await cookies()).get("s1_lang")?.value === "th" ? "th" : "en";
+}
+
 /** Absolute site address for links in emails: APP_URL when set, else the request's host. */
 export async function baseUrl(): Promise<string> {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");

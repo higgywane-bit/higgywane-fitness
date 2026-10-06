@@ -179,7 +179,7 @@ export function stepTarget(log: LogKind, value: number, dir: -1 | 1): number {
   return clampInt(next, 5, LIMITS.seconds);
 }
 
-export function toggleCue(ex: PlanExercise, cue: Pick<Cue, "id" | "en" | "th">): PlanExercise {
+export function toggleCue(ex: PlanExercise, cue: Pick<Cue, "id" | "en"> & { th?: string }): PlanExercise {
   const has = ex.cues.some((c) => c.id === cue.id);
   if (has) return { ...ex, cues: ex.cues.filter((c) => c.id !== cue.id) };
   if (ex.cues.length >= LIMITS.cues) return ex;

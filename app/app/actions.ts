@@ -8,6 +8,7 @@ import { getMailer } from "@/lib/email";
 import { ServiceError } from "@/lib/membership/service";
 import { baseUrl, requireClient, startSession, stopSession } from "@/lib/pt/session";
 import * as pt from "@/lib/pt/service";
+import { failed, lockedFor, succeeded } from "@/lib/pt/throttle";
 
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -38,9 +39,18 @@ async function open(fn: () => Promise<void>): Promise<Result> {
 /* ── sign in ──────────────────────────────────────────────── */
 
 export async function loginAction(email: string, password: string): Promise<Result> {
+  const key = `client:${email.trim().toLowerCase()}`;
+  const wait = lockedFor(key);
+  if (wait) return { ok: false, error: `Too many tries. Wait ${wait} min or use Forgot password.` };
   return open(async () => {
-    const { memberId } = await pt.clientLogin(await getDb(), email, password);
-    await startSession("client", memberId);
+    try {
+      const { memberId } = await pt.clientLogin(await getDb(), email, password);
+      succeeded(key);
+      await startSession("client", memberId);
+    } catch (err) {
+      failed(key);
+      throw err;
+    }
   });
 }
 

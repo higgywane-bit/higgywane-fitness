@@ -73,6 +73,56 @@
   --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
 
   color-scheme: dark;
+
+  /*
+   * super1 brand (PT client app + coach portal), from the super1.world design system.
+   * Pure black ground, cool greys, electric blue for the one primary action,
+   * pink for PT, yellow = needs attention, green = done, red = ended.
+   */
+  --s1-bg: #000000;
+  --s1-surface-1: #0f1115;
+  --s1-surface-2: #1e2228;
+  --s1-surface-3: #2a2f37;
+  --s1-surface-4: #3a404a;
+  --s1-hairline: rgb(255 255 255 / 0.08);
+  --s1-fg: #ffffff;
+  --s1-muted: #9ca3af; /* 8.2:1 on black, 6.2:1 on surface-2 */
+  --s1-faint: #7c838f; /* black and surface-1 only */
+  --s1-blue: #00b4ff;
+  --s1-on-blue: #000000;
+  --s1-blue-tint: rgb(0 180 255 / 0.14);
+  --s1-pink: #ff4edb;
+  --s1-pink-tint: rgb(255 78 219 / 0.14);
+  --s1-yellow: #ffe600;
+  --s1-yellow-tint: rgb(255 230 0 / 0.12);
+  --s1-green: #2bd46a;
+  --s1-green-tint: rgb(43 212 106 / 0.14);
+  --s1-red: #ff4d5e;
+  --s1-red-tint: rgb(255 77 94 / 0.14);
+  --s1-focus: rgb(0 180 255 / 0.45);
+}
+
+@theme inline {
+  --color-s1-bg: var(--s1-bg);
+  --color-s1-surface-1: var(--s1-surface-1);
+  --color-s1-surface-2: var(--s1-surface-2);
+  --color-s1-surface-3: var(--s1-surface-3);
+  --color-s1-surface-4: var(--s1-surface-4);
+  --color-s1-hairline: var(--s1-hairline);
+  --color-s1-fg: var(--s1-fg);
+  --color-s1-muted: var(--s1-muted);
+  --color-s1-faint: var(--s1-faint);
+  --color-s1-blue: var(--s1-blue);
+  --color-s1-on-blue: var(--s1-on-blue);
+  --color-s1-blue-tint: var(--s1-blue-tint);
+  --color-s1-pink: var(--s1-pink);
+  --color-s1-pink-tint: var(--s1-pink-tint);
+  --color-s1-yellow: var(--s1-yellow);
+  --color-s1-yellow-tint: var(--s1-yellow-tint);
+  --color-s1-green: var(--s1-green);
+  --color-s1-green-tint: var(--s1-green-tint);
+  --color-s1-red: var(--s1-red);
+  --color-s1-red-tint: var(--s1-red-tint);
 }
 
 @theme inline {
@@ -200,6 +250,41 @@
   .tap:active:not(:disabled) {
     transform: scale(0.96);
   }
+}
+
+/* super1 scope: Inter + Noto Sans Thai, blue focus ring, blue selection. */
+.s1 {
+  font-family: var(--font-inter), var(--font-thai), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01", "tnum" 0;
+  background: var(--s1-bg);
+  color: var(--s1-fg);
+  letter-spacing: -0.006em;
+}
+.s1 :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--s1-focus);
+}
+.s1 ::selection {
+  background: var(--s1-blue);
+  color: var(--s1-on-blue);
+}
+.s1 .num {
+  font-variant-numeric: tabular-nums;
+}
+.s1-glass {
+  background: rgb(15 17 21 / 0.78);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+@keyframes s1-pop {
+  from { transform: scale(0.6); opacity: 0; }
+}
+@keyframes s1-draw {
+  from { stroke-dashoffset: 120; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes s1-rise {
+  from { transform: translateY(12px); opacity: 0; }
 }
 
 /* Frosted surface: soft fill, top highlight, hairline edge drawn with inset shadow. */

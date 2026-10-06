@@ -13,6 +13,7 @@ import {
   sanitizeSetup,
   streak,
   toggleQuestion,
+  type FeedbackDay,
 } from "@/lib/pt/feedback";
 import { CUES, EXERCISES, findExercise, GROUPS, mergeLibrary, searchExercises, customExercise } from "@/lib/pt/library";
 import {
@@ -297,7 +298,7 @@ describe("daily feedback", () => {
   });
 
   it("averages, latest and streaks", () => {
-    const days = [
+    const days: FeedbackDay[] = [
       { date: "2026-10-06", answers: { steps: 8000 }, completedAt: null },
       { date: "2026-10-05", answers: { steps: 9000, bodyweight: 82.6 }, completedAt: "x" },
       { date: "2026-10-04", answers: { steps: 10000, bodyweight: 82.9 }, completedAt: "x" },

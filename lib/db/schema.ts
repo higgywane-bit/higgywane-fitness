@@ -428,6 +428,182 @@ export const messages = pgTable("messages", {
   createdAt: createdAt(),
 });
 
+/* ── PT app: coach portal + client app ────────────────────── */
+
+/**
+ * A member coached by a PT. Created when a PT pack is sold with a coach (or the coach
+ * adds them); "invited" until the member sets a password from the emailed link.
+ */
+export const ptClients = pgTable(
+  "pt_clients",
+  {
+    id: id(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    coachId: uuid("coach_id").references(() => staff.id, { onDelete: "set null" }),
+    /** invited | active | archived */
+    status: text("status").$type<"invited" | "active" | "archived">().notNull().default("invited"),
+    /** sha-256 of the one-time join link token; cleared once used */
+    inviteTokenHash: text("invite_token_hash"),
+    inviteExpiresAt: timestamp("invite_expires_at", { withTimezone: true }),
+    inviteSentAt: timestamp("invite_sent_at", { withTimezone: true }),
+    /** email | link (coach copied/shared it) */
+    inviteChannel: text("invite_channel"),
+    joinedAt: timestamp("joined_at", { withTimezone: true }),
+    /** what the client sees: { workouts, nutrition, dailyPlan, feedback, homeStats } */
+    visibility: jsonb("visibility").$type<Record<string, boolean>>().notNull().default({}),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    demo: boolean("demo").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("pt_clients_member_idx").on(t.memberId),
+    index("pt_clients_coach_idx").on(t.coachId, t.status),
+    uniqueIndex("pt_clients_invite_idx").on(t.inviteTokenHash),
+  ],
+);
+
+/** A client's sign-in for the app. One per member. */
+export const clientAccounts = pgTable(
+  "client_accounts",
+  {
+    id: id(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    /** scrypt$<salt>$<hash> */
+    passwordHash: text("password_hash").notNull(),
+    /** en | th */
+    lang: text("lang").notNull().default("en"),
+    createdAt: createdAt(),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("client_accounts_member_idx").on(t.memberId), uniqueIndex("client_accounts_email_idx").on(sql`lower(${t.email})`)],
+);
+
+/** Signed-in devices for the client app and the coach portal. Only a hash of the cookie is stored. */
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: id(),
+    tokenHash: text("token_hash").notNull(),
+    /** client (subject = member id) | coach (subject = staff id) */
+    kind: text("kind").$type<"client" | "coach">().notNull(),
+    subjectId: uuid("subject_id").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("auth_sessions_token_idx").on(t.tokenHash), index("auth_sessions_subject_idx").on(t.kind, t.subjectId)],
+);
+
+/**
+ * Workout, nutrition and daily-feedback setups as JSON documents (shapes in lib/pt).
+ * With a client: that client's live plan (one per kind). Without: a coach's template ("Programs").
+ */
+export const ptPlans = pgTable(
+  "pt_plans",
+  {
+    id: id(),
+    clientId: uuid("client_id").references(() => ptClients.id, { onDelete: "cascade" }),
+    coachId: uuid("coach_id").references(() => staff.id, { onDelete: "set null" }),
+    /** workout | diet | feedback */
+    kind: text("kind").$type<"workout" | "diet" | "feedback">().notNull(),
+    name: text("name").notNull().default(""),
+    doc: jsonb("doc").notNull(),
+    /** goes up on every save; the client app shows "updated" when it changes */
+    version: integer("version").notNull().default(1),
+    demo: boolean("demo").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("pt_plans_client_kind_idx").on(t.clientId, t.kind).where(sql`${t.clientId} is not null`),
+    index("pt_plans_coach_idx").on(t.coachId, t.kind),
+  ],
+);
+
+/** A coach's own exercises and cues, on top of content/pt-library.json. */
+export const ptLibraryItems = pgTable(
+  "pt_library_items",
+  {
+    id: id(),
+    coachId: uuid("coach_id").references(() => staff.id, { onDelete: "cascade" }),
+    /** exercise | cue */
+    kind: text("kind").$type<"exercise" | "cue">().notNull(),
+    data: jsonb("data").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("pt_library_coach_idx").on(t.coachId, t.kind)],
+);
+
+/** A finished workout the client logged in the app. */
+export const workoutLogs = pgTable(
+  "workout_logs",
+  {
+    id: id(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => ptClients.id, { onDelete: "cascade" }),
+    dayId: text("day_id").notNull(),
+    dayName: text("day_name").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }).notNull(),
+    /** LoggedExercise[] (lib/pt/progress.ts) */
+    entries: jsonb("entries").notNull(),
+    note: text("note"),
+    /** worked out on save, for lists and charts */
+    volumeKg: integer("volume_kg").notNull().default(0),
+    setsDone: integer("sets_done").notNull().default(0),
+    planVersion: integer("plan_version"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("workout_logs_client_idx").on(t.clientId, t.finishedAt)],
+);
+
+/** One row per client per day: their answers, saved as they go, and when they tapped Complete. */
+export const dailyFeedback = pgTable(
+  "daily_feedback",
+  {
+    id: id(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => ptClients.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    answers: jsonb("answers").$type<Record<string, number | boolean | string>>().notNull().default({}),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("daily_feedback_day_idx").on(t.clientId, t.date)],
+);
+
+/**
+ * In-app notices. audience = client: "Bella updated your workout". audience = coach:
+ * "Pete finished Chest and Back #1", "Pete joined the app".
+ */
+export const ptNotifications = pgTable(
+  "pt_notifications",
+  {
+    id: id(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => ptClients.id, { onDelete: "cascade" }),
+    /** client | coach */
+    audience: text("audience").$type<"client" | "coach">().notNull(),
+    /** plan.updated | invite.accepted | workout.done | feedback.done */
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    /** app path to open */
+    href: text("href"),
+    createdAt: createdAt(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (t) => [index("pt_notifications_inbox_idx").on(t.clientId, t.audience, t.createdAt)],
+);
+
 export type Member = typeof members.$inferSelect;
 export type Credential = typeof credentials.$inferSelect;
 export type MembershipRow = typeof memberships.$inferSelect;
@@ -444,3 +620,9 @@ export type PtBooking = typeof ptBookings.$inferSelect;
 export type CafeOrderRow = typeof cafeOrders.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
+export type PtClient = typeof ptClients.$inferSelect;
+export type ClientAccount = typeof clientAccounts.$inferSelect;
+export type PtPlanRow = typeof ptPlans.$inferSelect;
+export type WorkoutLogRow = typeof workoutLogs.$inferSelect;
+export type DailyFeedbackRow = typeof dailyFeedback.$inferSelect;
+export type PtNotification = typeof ptNotifications.$inferSelect;
